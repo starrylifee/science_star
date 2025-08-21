@@ -1,0 +1,1833 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우주 탐험대! 인터랙티브 과학 시뮬레이션</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body class="bg-gray-900 text-white">
+
+    <div class="w-full max-w-7xl mx-auto p-4">
+        <header class="text-center mb-4">
+            <h1 class="text-4xl md:text-5xl font-bold text-yellow-300 tracking-wider">🚀 우주 탐험대!</h1>
+        </header>
+
+        <nav class="flex flex-wrap justify-center gap-2 mb-6 p-2 bg-gray-800 rounded-xl">
+            <button class="nav-btn active px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="1">1. 달에서 찾은 이야기</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="2">2. 내 손으로 그리는 보름달</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="3">3. 나만의 충돌 구덩이</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="4">4. 사라진 구덩이</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="5">5. 달의 위상 변화</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="6">6. 태양계 여행</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="7">7. 별자리 찾기</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="8">8. 나만의 굿즈 만들기</button>
+            <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="9">9. 형성평가</button>
+        </nav>
+
+        <main id="chaptersContainer">
+            <div id="chapter-1" class="chapter-content active">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-yellow-300">챕터 1: 달에서 찾은 이야기 🎨</h2>
+                    <p class="text-lg text-gray-300 mt-2">보름달 위에 나만의 상상을 펼쳐보세요!</p>
+                </div>
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div id="ch1_captureArea" class="flex-grow bg-black rounded-2xl p-4 border-2 border-gray-700 shadow-2xl shadow-blue-500/20 flex flex-col items-center justify-center">
+                        <div id="ch1_canvasContainer" class="relative w-full aspect-square max-w-lg mx-auto">
+                            <img id="ch1_moonImage" src="https://images.unsplash.com/photo-1522030299830-16b8d3d049fe?q=80&w=1280" class="absolute top-0 left-0 w-full h-full object-cover rounded-full" alt="보름달" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://placehold.co/512x512/000000/FFFFFF?text=Moon';">
+                            <canvas id="ch1_drawingCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                        </div>
+                    </div>
+                    <div class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
+                        <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                            <h3 class="text-xl font-bold mb-3 text-center">그리기 도구</h3>
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <button id="ch1_pen" class="tool-btn active w-full p-2 bg-gray-700 rounded-lg hover:bg-indigo-600 transition-all">펜✏️</button>
+                                <button id="ch1_eraser" class="tool-btn w-full p-2 bg-gray-700 rounded-lg hover:bg-indigo-600 transition-all">지우개 🧼</button>
+                            </div>
+                            <div class="mb-4">
+                                <label for="ch1_lineWidth" class="block mb-2 text-sm font-medium">선 굵기</label>
+                                <input type="range" id="ch1_lineWidth" min="1" max="50" value="10" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">색상</label>
+                                <div id="ch1_colorPalette" class="flex justify-between items-center gap-1">
+                                    <button class="color-btn w-8 h-8 rounded-full shadow-md active" style="background-color: #FFFFFF; --tw-shadow-color: #FFFFFF" data-color="#FFFFFF"></button>
+                                    <button class="color-btn w-8 h-8 rounded-full shadow-md" style="background-color: #EF4444; --tw-shadow-color: #EF4444" data-color="#EF4444"></button>
+                                    <button class="color-btn w-8 h-8 rounded-full shadow-md" style="background-color: #3B82F6; --tw-shadow-color: #3B82F6" data-color="#3B82F6"></button>
+                                    <button class="color-btn w-8 h-8 rounded-full shadow-md" style="background-color: #22C55E; --tw-shadow-color: #22C55E" data-color="#22C55E"></button>
+                                    <button class="color-btn w-8 h-8 rounded-full shadow-md" style="background-color: #FBBF24; --tw-shadow-color: #FBBF24" data-color="#FBBF24"></button>
+                                    <input type="color" id="ch1_colorPicker" class="w-8 h-8 p-0 border-none rounded-full bg-transparent cursor-pointer" value="#FF00FF">
+                                </div>
+                            </div>
+                        </div>
+                        <button id="ch1_downloadBtn" class="w-full p-3 bg-teal-600 rounded-lg font-bold hover:bg-teal-500 transition-transform transform hover:scale-105">다운로드 🖼️</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chapter-2" class="chapter-content">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-yellow-300">챕터 2: 내 손으로 그리는 보름달 ✍️</h2>
+                    <p class="text-lg text-gray-300 mt-2">왼쪽의 보름달 사진을 보면서 멋지게 따라 그려보세요!</p>
+                </div>
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="flex-1 flex justify-center items-center bg-black rounded-2xl p-4 border-2 border-gray-700">
+                        <img src="https://images.unsplash.com/photo-1522030299830-16b8d3d049fe?q=80&w=1280" class="max-w-full max-h-full object-contain rounded-lg" alt="참고용 보름달">
+                    </div>
+                    <div class="flex-1 flex justify-center items-center bg-black rounded-2xl p-4 border-2 border-gray-700">
+                        <canvas id="ch2_drawingCanvas" class="bg-black rounded-lg w-full h-full"></canvas>
+                    </div>
+                    <div class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
+                        <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                            <h3 class="text-xl font-bold mb-3 text-center">그리기 도구</h3>
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <button id="ch2_pen" class="tool-btn active w-full p-2 bg-gray-700 rounded-lg hover:bg-indigo-600 transition-all">펜 ✏️</button>
+                                <button id="ch2_eraser" class="tool-btn w-full p-2 bg-gray-700 rounded-lg hover:bg-indigo-600 transition-all">지우개 🧼</button>
+                            </div>
+                            <div class="mb-4">
+                                <label for="ch2_lineWidth" class="block mb-2 text-sm font-medium">선 굵기</label>
+                                <input type="range" id="ch2_lineWidth" min="1" max="50" value="10" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium">색상</label>
+                                <input type="color" id="ch2_colorPicker" class="w-full h-10 p-1 border-gray-600 rounded-lg bg-gray-700 cursor-pointer" value="#FFFFFF">
+                            </div>
+                        </div>
+                        <button id="ch2_downloadBtn" class="w-full p-3 bg-teal-600 rounded-lg font-bold hover:bg-teal-500 transition-transform transform hover:scale-105">저장하기 🖼️</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chapter-3" class="chapter-content">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-yellow-300">챕터 3: 나만의 충돌 구덩이 만들기 💥</h2>
+                    <p class="text-lg text-gray-300 mt-2">운석의 질량과 속도를 조절해서 달 표면에 멋진 크레이터를 만들어보세요!</p>
+                </div>
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="flex-1 flex flex-col justify-center items-center bg-black rounded-2xl p-4 border-2 border-gray-700 min-h-[450px] lg:min-h-0">
+                        <div id="crater-simulation-container" class="w-full h-96 relative">
+                        </div>
+                        <div id="crater-info" class="mt-4 text-center h-12"></div>
+                    </div>
+                    <div class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
+                        <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                            <h3 class="text-xl font-bold mb-3 text-center">운석 조종 패널</h3>
+                            <div class="mb-4">
+                                <label for="massSlider" class="block mb-2 text-sm font-medium">질량 (Mass): <span id="massValue">50</span></label>
+                                <input type="range" id="massSlider" min="10" max="100" value="50" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                            <div class="mb-4">
+                                <label for="velocitySlider" class="block mb-2 text-sm font-medium">속도 (Velocity): <span id="velocityValue">50</span></label>
+                                <input type="range" id="velocitySlider" min="10" max="100" value="50" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                            <div class="mb-4">
+                                <label for="directionThetaSlider" class="block mb-2 text-sm font-medium">방향 (좌우): <span id="directionThetaValue">0</span>°</label>
+                                <input type="range" id="directionThetaSlider" min="0" max="360" value="0" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                                <div class="mb-4">
+                                <label for="directionPhiSlider" class="block mb-2 text-sm font-medium">방향 (상하): <span id="directionPhiValue">60</span>°</label>
+                                <input type="range" id="directionPhiSlider" min="0" max="180" value="60" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                            </div>
+                        </div>
+                        <button id="collideBtn" class="w-full p-3 bg-red-600 rounded-lg font-bold hover:bg-red-500 transition-transform transform hover:scale-105">충돌! 💥</button>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="resetBtn" class="w-full p-3 bg-blue-600 rounded-lg font-bold hover:bg-blue-500 transition-transform transform hover:scale-105">새로 시작 🔄</button>
+                            <button id="ch3_downloadBtn" class="w-full p-3 bg-teal-600 rounded-lg font-bold hover:bg-teal-500 transition-transform transform hover:scale-105">다운로드 🖼️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="chapter-4" class="chapter-content">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-yellow-300">챕터 4: 사라진 구덩이의 비밀 💧</h2>
+                    <p class="text-lg text-gray-300 mt-2">달과 지구에 같은 크기의 구덩이가 생겼을 때, 어떤 변화가 일어날까요? '시작' 버튼을 눌러 확인해보세요.</p>
+                </div>
+                <div class="flex flex-col gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px]">
+                        <div class="bg-black rounded-2xl p-4 border-2 border-gray-700 flex flex-col">
+                            <h3 class="text-xl font-bold text-center mb-2">달 (Moon)</h3>
+                            <div id="ch4-moon-container" class="flex-grow w-full h-full relative"></div>
+                        </div>
+                        <div class="bg-black rounded-2xl p-4 border-2 border-gray-700 flex flex-col">
+                            <h3 class="text-xl font-bold text-center mb-2">지구 (Earth)</h3>
+                            <div id="ch4-earth-container" class="flex-grow w-full h-full relative"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-center items-center gap-4 bg-gray-800 p-4 rounded-2xl">
+                        <button id="ch4-start-btn" class="px-6 py-3 bg-green-600 rounded-lg font-bold hover:bg-green-500 transition-transform transform hover:scale-105">시뮬레이션 시작 ▶️</button>
+                        <button id="ch4-reset-btn" class="px-6 py-3 bg-blue-600 rounded-lg font-bold hover:bg-blue-500 transition-transform transform hover:scale-105">초기화 🔄</button>
+                        <div class="text-lg">경과 시간: <span id="ch4-time" class="font-bold text-yellow-300">0</span> 백만 년</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chapter-5" class="chapter-content">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-yellow-300">챕터 5: 달의 위상 변화 관찰 🌗</h2>
+                    <p class="text-lg text-gray-300 mt-2">관측 시간대나 특정 위상을 선택하고, 지구 위 관측자의 시점에서 달의 모습을 관찰해보세요.</p>
+                </div>
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="flex-1 bg-black rounded-2xl border-2 border-gray-700 relative h-[500px]">
+                        <div id="ch5-container" class="absolute inset-0"></div>
+                        <div class="absolute left-2 top-2 text-xs bg-gray-800/70 px-2 py-1 rounded-md">마우스로 드래그, 휠로 확대/축소 가능</div>
+                    </div>
+                    <div class="w-full lg:w-96 flex-shrink-0 flex flex-col gap-4 bg-gray-800 p-4 rounded-2xl">
+                        <div class="flex flex-wrap justify-center items-center gap-4">
+                            <div class="flex gap-2">
+                                <button id="ch5-start-btn" class="px-4 py-2 bg-green-600 rounded-lg font-bold hover:bg-green-500">시작 ▶️</button>
+                                <button id="ch5-stop-btn" class="px-4 py-2 bg-red-600 rounded-lg font-bold hover:bg-red-500">정지 ⏸️</button>
+                            </div>
+                            <div class="text-lg">날짜: <span id="ch5-date" class="font-bold text-yellow-300">1</span> 일</div>
+                            <div class="flex gap-4">
+                                <label class="toggle-label text-sm">
+                                    <input type="checkbox" id="ch5-sun-toggle" class="toggle-input" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="ml-2">태양 보기</span>
+                                </label>
+                                <label class="toggle-label text-sm">
+                                    <input type="checkbox" id="ch5-moon-toggle" class="toggle-input" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="ml-2">달 보기</span>
+                                </label>
+                            </div>
+                        </div>
+                        <hr class="border-gray-600 my-2">
+                        <div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-2">
+                            <div class="text-sm font-bold">시간대 선택:</div>
+                            <div class="flex gap-2">
+                                <button id="ch5-evening-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">초저녁</button>
+                                <button id="ch5-midnight-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">자정</button>
+                                <button id="ch5-dawn-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">새벽</button>
+                            </div>
+                            <div class="text-sm font-bold ml-4">위상 선택:</div>
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                <button id="ch5-new-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">삭</button>
+                                <button id="ch5-waxing-crescent-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">초승</button>
+                                <button id="ch5-first-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">상현</button>
+                                <button id="ch5-full-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">보름</button>
+                                <button id="ch5-third-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">하현</button>
+                                <button id="ch5-waning-crescent-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">그믐</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="chapter-6" class="chapter-content">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold text-yellow-300">챕터 6: 태양계 행성 여행 🚀</h2>
+                    <p class="text-lg text-gray-300 mt-2">가고 싶은 행성을 클릭하여 태양계를 탐험하고 행성 정보를 확인해보세요.</p>
+                </div>
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="flex-1 h-[500px] lg:h-auto bg-black rounded-2xl border-2 border-gray-700 relative">
+                        <div id="ch6-container" class="w-full h-full"></div>
+                    </div>
+                    <div class="w-full lg:w-96 flex-shrink-0 flex flex-col gap-4">
+                        <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                            <h3 class="text-xl font-bold mb-3 text-center">행성 선택</h3>
+                            <div id="ch6-planet-buttons" class="grid grid-cols-3 gap-3">
+                                </div>
+                        </div>
+                        <div id="ch6-info-panel" class="bg-gray-800 p-4 rounded-2xl border border-gray-700 flex-grow min-h-[200px]">
+                            <h3 id="ch6-info-title" class="text-2xl font-bold text-yellow-300 mb-2">태양 (Sun)</h3>
+                            <p id="ch6-info-text" class="text-gray-300 overflow-y-auto max-h-48">태양계의 중심에 있는 항성입니다. 행성을 선택해 여행을 시작하세요!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chapter-7" class="chapter-content">
+                <div class="bg-gray-800 p-4 md:p-8 rounded-lg shadow-xl w-full max-w-5xl mx-auto">
+                    <h2 class="text-3xl font-bold text-yellow-300 mb-6 text-center">챕터 7: 나만의 별자리 그리기 ✨</h2>
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <div class="flex-grow">
+                            <canvas id="constellationCanvas" class="w-full h-96 lg:h-[500px] border border-gray-700"></canvas>
+                        </div>
+                        <div class="w-full lg:w-72 flex-shrink-0 flex flex-col gap-4">
+                                <div class="bg-gray-700 p-4 rounded-xl">
+                                <h3 class="text-xl font-bold mb-4 text-center text-yellow-200">그리기 도구</h3>
+                                <div class="grid grid-cols-2 gap-3 mb-4">
+                                    <button id="modeStar" class="tool-btn px-4 py-2 bg-blue-500 hover:bg-blue-600 focus:ring-blue-400 rounded-lg font-bold">별 찍기</button>
+                                    <button id="modeLine" class="tool-btn px-4 py-2 bg-purple-500 hover:bg-purple-600 focus:ring-purple-400 rounded-lg font-bold">선 긋기</button>
+                                </div>
+                                <div class="flex items-center justify-center gap-4 mb-4">
+                                    <label for="lineColor" class="font-semibold">선 색상:</label>
+                                    <input type="color" id="lineColor" value="#ffffff" class="w-12 h-10 rounded-md border-2 border-gray-500 cursor-pointer" title="선 색상 선택">
+                                </div>
+                                <button id="clearCanvas" class="w-full px-4 py-2 bg-red-500 hover:bg-red-600 focus:ring-red-400 rounded-lg font-bold">모두 지우기</button>
+                            </div>
+                            <div class="bg-gray-700 p-4 rounded-xl flex flex-col">
+                                <h3 class="text-xl font-semibold text-yellow-200 mb-3 text-center">나의 별자리 이야기</h3>
+                                <textarea id="storyText" rows="6" class="w-full p-3 rounded-md bg-gray-800 text-gray-100 border border-gray-600" placeholder="여기에 당신의 별자리에 대한 이야기를 작성하세요..."></textarea>
+                            </div>
+                                <button id="ch7_downloadBtn" class="w-full p-3 bg-teal-600 rounded-lg font-bold hover:bg-teal-500">결과 다운로드 🖼️</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="chapter-8" class="chapter-content">
+                    <div class="text-center mb-6">
+                        <h2 class="text-3xl font-bold text-yellow-300">챕터 8: 나만의 굿즈 만들기 🎨</h2>
+                        <p class="text-lg text-gray-300 mt-2">가방, 열쇠고리, 핸드폰 케이스를 우주 테마로 꾸며보세요!</p>
+                    </div>
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <div class="flex-1 bg-gray-800 p-4 rounded-xl border-2 border-gray-700 h-[600px] relative">
+                            <canvas id="decoratorCanvas" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
+                            <div class="bg-gray-700 p-4 rounded-xl">
+                                    <h3 class="text-xl font-bold mb-4 text-center text-yellow-200">꾸밀 물건 선택</h3>
+                                    <div class="grid grid-cols-3 gap-2 mb-4">
+                                        <button class="item-btn p-2 bg-gray-600 rounded-lg text-sm" data-item="bag">가방</button>
+                                        <button class="item-btn p-2 bg-gray-600 rounded-lg text-sm" data-item="keyring">열쇠고리</button>
+                                        <button class="item-btn p-2 bg-gray-600 rounded-lg text-sm" data-item="phonecase">폰케이스</button>
+                                    </div>
+                            </div>
+                            <div class="bg-gray-700 p-4 rounded-xl">
+                                <h3 class="text-xl font-bold mb-4 text-center text-yellow-200">스티커</h3>
+                                <div id="sticker-palette" class="grid grid-cols-4 gap-2 text-2xl">
+                                    </div>
+                            </div>
+                            <div class="bg-gray-700 p-4 rounded-xl">
+                                    <h3 class="text-xl font-bold mb-4 text-center text-yellow-200">그리기 도구</h3>
+                                    <div class="grid grid-cols-2 gap-3 mb-4">
+                                        <button id="decorator-pen" class="tool-btn p-2 bg-blue-500 rounded-lg">펜</button>
+                                        <button id="decorator-eraser" class="tool-btn p-2 bg-purple-500 rounded-lg">지우개</button>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <label for="decorator-color">색상:</label>
+                                        <input type="color" id="decorator-color" value="#FFFFFF" class="w-10 h-10 p-0 border-none rounded-md bg-transparent cursor-pointer">
+                                        <label for="decorator-width">굵기:</label>
+                                        <input type="range" id="decorator-width" min="1" max="30" value="5" class="w-full">
+                                    </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="decorator-clear" class="p-3 bg-red-600 rounded-lg font-bold">지우기</button>
+                                <button id="decorator-download" class="p-3 bg-teal-600 rounded-lg font-bold">다운로드</button>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+            
+            <div id="chapter-9" class="chapter-content">
+                <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-5xl mx-auto">
+                    <h2 class="text-3xl font-bold text-yellow-300 mb-6 text-center">챕터 9: 형성평가 📝</h2>
+                    <form id="quiz-form" class="space-y-6 text-lg">
+                        <div class="flex items-center gap-2">
+                            <p class="mb-2">1. 달은 지구처럼 (<input type="text" name="q1" class="w-20 text-center bg-gray-700 rounded mx-1">) 모양입니다.</p>
+                            <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="ㄷㄱ">힌트 보기</button>
+                        </div>
+                            <div class="flex items-center gap-2">
+                            <p class="mb-2">2. 달 표면에는 (<input type="text" name="q2" class="w-28 text-center bg-gray-700 rounded mx-1">) 이/가 많습니다.</p>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="ㅊㄷ ㄱㄷㅇ">힌트 보기</button>
+                        </div>
+                            <div class="flex items-center gap-2">
+                            <p class="mb-2">3. 태양계 행성 중 가장 바깥쪽에 있는 것은 (<input type="text" name="q3" class="w-24 text-center bg-gray-700 rounded mx-1">) 입니다.</p>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="ㅎㅇㅅ">힌트 보기</button>
+                        </div>
+                            <div class="flex items-center gap-2">
+                            <p class="mb-2">4. 목성, 토성 등은 표면이 (<input type="text" name="q4" class="w-16 text-center bg-gray-700 rounded mx-1">)(으)로 이루어져 있습니다.</p>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="ㄱㅊ">힌트 보기</button>
+                        </div>
+                            <div class="flex items-center gap-2">
+                            <p class="mb-2">5. 별은 (<input type="text" name="q5" class="w-16 text-center bg-gray-700 rounded mx-1">)처럼 스스로 빛을 내는 천체입니다.</p>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="ㅌㅇ">힌트 보기</button>
+                        </div>
+                            <div class="flex items-center gap-2">
+                            <p class="mb-2">6. 우리나라에서는 북쪽 밤하늘에서 (<input type="text" name="q6-1" class="w-20 text-center bg-gray-700 rounded mx-1">), (<input type="text" name="q6-2" class="w-24 text-center bg-gray-700 rounded mx-1">), (<input type="text" name="q6-3" class="w-28 text-center bg-gray-700 rounded mx-1">) 를 관찰할 수 있습니다.</p>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="ㅂㄷㅊㅅ, ㅈㅇㄱㅈㄹ, ㅋㅅㅇㅍㅇㅇ">힌트 보기</button>
+                        </div>
+                            <div class="flex items-center gap-2">
+                            <p class="mb-2">7. 초승달 → (<input type="text" name="q7-1" class="w-20 text-center bg-gray-700 rounded mx-1">) → 보름달 → (<input type="text" name="q7-2" class="w-20 text-center bg-gray-700 rounded mx-1">) → 그믐달 순으로 달의 모양이 변합니다.</p>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="상현달, 하현달">힌트 보기</button>
+                        </div>
+                            <div class="flex items-center gap-2">
+                            <p class="mb-2">8. 달의 모양은 약 (<input type="text" name="q8" class="w-16 text-center bg-gray-700 rounded mx-1">)일을 주기로 변합니다.</p>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="30">힌트 보기</button>
+                        </div>
+
+                        <div class="text-center pt-4">
+                            <button type="submit" class="px-8 py-3 bg-blue-600 rounded-lg font-bold text-xl hover:bg-blue-500">제출하기</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="quiz-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50">
+                <div class="bg-gray-800 rounded-lg shadow-xl p-8 max-w-2xl w-full">
+                    <h3 id="quiz-result-title" class="text-3xl font-bold text-center mb-6"></h3>
+                    <div id="quiz-feedback" class="space-y-4 text-lg max-h-80 overflow-y-auto"></div>
+                    <div class="text-center mt-8">
+                        <button id="quiz-close-btn" class="px-6 py-2 bg-blue-600 rounded-lg font-bold hover:bg-blue-500">닫기</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module" src="scripts/main.js"></script>
+    <!--
+    
+        // --- Generic Drawing Canvas Class ---
+        class DrawingCanvas {
+            constructor(canvasId, options = {}) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) { 
+                    console.error(`Canvas with id ${canvasId} not found.`);
+                    return; 
+                }
+                this.ctx = this.canvas.getContext('2d');
+                this.isDrawing = false; this.lastX = 0; this.lastY = 0;
+                
+                this.color = options.color || '#000000';
+                this.lineWidth = options.lineWidth || 5;
+
+                this.ctx.strokeStyle = this.color;
+                this.ctx.lineWidth = this.lineWidth;
+                this.ctx.lineJoin = 'round'; this.ctx.lineCap = 'round';
+                
+                // bindEvents is now called by subclasses
+            }
+
+            bindEvents() {
+                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+                this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+                this.canvas.addEventListener('touchstart', (e) => this.startDrawing(e), { passive: false });
+                this.canvas.addEventListener('touchmove', (e) => this.draw(e), { passive: false });
+                this.canvas.addEventListener('touchend', () => this.stopDrawing());
+            }
+
+            getPos(evt) {
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const touch = evt.touches ? evt.touches[0] : null;
+                return {
+                    x: ((touch ? touch.clientX : evt.clientX) - rect.left) * scaleX,
+                    y: ((touch ? touch.clientY : evt.clientY) - rect.top) * scaleY
+                };
+            }
+
+            startDrawing(e) { e.preventDefault(); this.isDrawing = true; const { x, y } = this.getPos(e); [this.lastX, this.lastY] = [x, y]; }
+            draw(e) { if (!this.isDrawing) return; e.preventDefault(); const { x, y } = this.getPos(e); this.ctx.beginPath(); this.ctx.moveTo(this.lastX, this.lastY); this.ctx.lineTo(x, y); this.ctx.stroke(); [this.lastX, this.lastY] = [x, y]; }
+            stopDrawing() { this.isDrawing = false; }
+
+            resizeCanvas() {
+                const container = this.canvas.parentElement;
+                if(!container) return;
+                
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                if (this.canvas.width > 0 && this.canvas.height > 0) {
+                    tempCtx.drawImage(this.canvas, 0, 0);
+                }
+
+                const { width, height } = container.getBoundingClientRect();
+                this.canvas.width = width;
+                this.canvas.height = height;
+
+                if (tempCanvas.width > 0 && tempCanvas.height > 0) {
+                    this.ctx.drawImage(tempCanvas, 0, 0);
+                }
+                
+                this.ctx.strokeStyle = this.color;
+                this.ctx.lineWidth = this.lineWidth;
+                this.ctx.lineJoin = 'round';
+                this.ctx.lineCap = 'round';
+            }
+
+            setTool(tool) { this.ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over'; }
+            
+            setLineWidth(width) { 
+                this.lineWidth = width;
+                this.ctx.lineWidth = width; 
+            }
+            setColor(color) { 
+                this.color = color;
+                this.ctx.strokeStyle = color; 
+            }
+            download(filename) { const link = document.createElement('a'); link.download = filename; link.href = this.canvas.toDataURL('image/png'); link.click(); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const chapterContents = document.querySelectorAll('.chapter-content');
+            
+            let ch1_drawingCanvas = null;
+            let ch2_drawingCanvas = null;
+            let ch3_three_app = null;
+            let ch4_erosion_sim = null;
+            let ch5_moon_phase_sim = null;
+            let ch6_solar_system_tour = null;
+            let ch7_constellation_app = null;
+            let ch8_item_decorator = null;
+            let ch9_quiz_app = null;
+
+            // --- Chapter 1 Functions (AI 기능 제거됨) ---
+            function captureChapter1Image() {
+                const moonImage = document.getElementById('ch1_moonImage');
+                const drawingCanvas = document.getElementById('ch1_drawingCanvas');
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = drawingCanvas.width;
+                tempCanvas.height = drawingCanvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                tempCtx.drawImage(moonImage, 0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(drawingCanvas, 0, 0);
+                
+                return tempCanvas.toDataURL('image/png');
+            }
+            
+            function initChapter1() {
+                if (!ch1_drawingCanvas) {
+                    ch1_drawingCanvas = new DrawingCanvas('ch1_drawingCanvas', { color: '#FFFFFF', lineWidth: 10 });
+                    if (ch1_drawingCanvas.canvas) {
+                        ch1_drawingCanvas.bindEvents();
+                        const ch1_moonImage = document.getElementById('ch1_moonImage');
+                        ch1_moonImage.onload = () => ch1_drawingCanvas.resizeCanvas();
+                        
+                        document.getElementById('ch1_pen').addEventListener('click', () => { ch1_drawingCanvas.setTool('pen'); document.getElementById('ch1_pen').classList.add('active'); document.getElementById('ch1_eraser').classList.remove('active'); });
+                        document.getElementById('ch1_eraser').addEventListener('click', () => { ch1_drawingCanvas.setTool('eraser'); document.getElementById('ch1_eraser').classList.add('active'); document.getElementById('ch1_pen').classList.remove('active'); });
+                        document.getElementById('ch1_lineWidth').addEventListener('input', (e) => ch1_drawingCanvas.setLineWidth(e.target.value));
+                        document.getElementById('ch1_colorPalette').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON' && e.target.dataset.color) { ch1_drawingCanvas.setColor(e.target.dataset.color); document.querySelectorAll('#ch1_colorPalette .color-btn').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); document.getElementById('ch1_pen').click(); } });
+                        document.getElementById('ch1_colorPicker').addEventListener('input', (e) => { ch1_drawingCanvas.setColor(e.target.value); document.querySelectorAll('#ch1_colorPalette .color-btn').forEach(btn => btn.classList.remove('active')); document.getElementById('ch1_pen').click(); });
+                        
+                        // AI 분석 버튼 관련 코드 모두 제거
+
+                        document.getElementById('ch1_downloadBtn').addEventListener('click', () => {
+                                const imageDataUrl = captureChapter1Image();
+                                const link = document.createElement('a');
+                                link.href = imageDataUrl;
+                                link.download = '나의-달-그림.png';
+                                link.click();
+                        });
+                    }
+                }
+                ch1_drawingCanvas.resizeCanvas();
+            }
+
+            function initChapter2() {
+                if (!ch2_drawingCanvas) {
+                    ch2_drawingCanvas = new DrawingCanvas('ch2_drawingCanvas', { color: '#FFFFFF', lineWidth: 10 });
+                    if (ch2_drawingCanvas.canvas) {
+                        ch2_drawingCanvas.bindEvents();
+                        document.getElementById('ch2_pen').addEventListener('click', () => { ch2_drawingCanvas.setTool('pen'); document.getElementById('ch2_pen').classList.add('active'); document.getElementById('ch2_eraser').classList.remove('active'); });
+                        document.getElementById('ch2_eraser').addEventListener('click', () => { ch2_drawingCanvas.setTool('eraser'); document.getElementById('ch2_eraser').classList.add('active'); document.getElementById('ch2_pen').classList.remove('active'); });
+                        document.getElementById('ch2_lineWidth').addEventListener('input', (e) => ch2_drawingCanvas.setLineWidth(e.target.value));
+                        document.getElementById('ch2_colorPicker').addEventListener('input', (e) => { ch2_drawingCanvas.setColor(e.target.value); document.getElementById('ch2_pen').click(); });
+                        document.getElementById('ch2_downloadBtn').addEventListener('click', () => { ch2_drawingCanvas.download('보름달-그림.png'); });
+                    }
+                }
+                ch2_drawingCanvas.resizeCanvas();
+            }
+            
+            function initChapter3() {
+                if (!ch3_three_app) {
+                    ch3_three_app = new CraterSimulation('crater-simulation-container');
+                }
+            }
+            
+            function initChapter4() {
+                if (!ch4_erosion_sim) {
+                    ch4_erosion_sim = new ErosionSimulation('ch4-moon-container', 'ch4-earth-container');
+                }
+            }
+            
+            function initChapter5() {
+                if (!ch5_moon_phase_sim) {
+                    ch5_moon_phase_sim = new MoonPhaseSimulation('ch5-container');
+                }
+            }
+            
+            function initChapter6() {
+                if (!ch6_solar_system_tour) {
+                    ch6_solar_system_tour = new SolarSystemTour('ch6-container');
+                }
+            }
+            
+            function initChapter7() {
+                if (!ch7_constellation_app) {
+                    ch7_constellation_app = new ConstellationDrawer('constellationCanvas');
+                }
+                    ch7_constellation_app.drawAllElements();
+            }
+
+            function initChapter8() {
+                if (!ch8_item_decorator) {
+                    ch8_item_decorator = new ItemDecorator('decoratorCanvas');
+                }
+            }
+
+            function initChapter9() {
+                if (!ch9_quiz_app) {
+                    ch9_quiz_app = new Quiz('quiz-form');
+                }
+            }
+
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const chapterNumber = button.dataset.chapter;
+                    
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    chapterContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === `chapter-${chapterNumber}`) {
+                            content.classList.add('active');
+                        }
+                    });
+                    
+                    if (chapterNumber === '1') initChapter1(); 
+                    else if (chapterNumber === '2') initChapter2(); 
+                    else if (chapterNumber === '3') initChapter3(); 
+                    else if (chapterNumber === '4') initChapter4();
+                    else if (chapterNumber === '5') initChapter5();
+                    else if (chapterNumber === '6') initChapter6();
+                    else if (chapterNumber === '7') initChapter7();
+                    else if (chapterNumber === '8') initChapter8();
+                    else if (chapterNumber === '9') initChapter9();
+                });
+            });
+
+            class CraterSimulation {
+                constructor(containerId) {
+                    this.container = document.getElementById(containerId);
+                    if (!this.container) return;
+                    this.scene = new THREE.Scene();
+                    this.camera = new THREE.PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+                    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                    this.meteor = null; this.particles = [];
+                    this.init(); this.animate();
+                }
+                init() {
+                    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                    this.renderer.setPixelRatio(window.devicePixelRatio);
+                    this.renderer.shadowMap.enabled = true;
+                    this.container.innerHTML = '';
+                    this.container.appendChild(this.renderer.domElement);
+                    this.camera.position.set(0, 150, 300);
+                    this.controls.update();
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                    this.scene.add(ambientLight);
+                    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                    directionalLight.position.set(-100, 100, 100);
+                    directionalLight.castShadow = true;
+                    this.scene.add(directionalLight);
+                    this.createMoon();
+                    window.addEventListener('resize', () => this.onWindowResize(), false);
+                }
+                createMoon() {
+                    const moonGeometry = new THREE.SphereGeometry(100, 128, 128); 
+                    const moonMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.9 });
+                    this.moon = new THREE.Mesh(moonGeometry, moonMaterial);
+                    this.moon.receiveShadow = true;
+                    this.scene.add(this.moon);
+                }
+                onWindowResize() {
+                    if (!this.container) return;
+                    this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                }
+                createCollision(mass, velocity, theta, phi) {
+                    if (this.meteor) this.scene.remove(this.meteor);
+                    const meteorSize = mass / 10;
+                    const meteorGeometry = new THREE.SphereGeometry(meteorSize, 16, 16);
+                    const meteorMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.5 });
+                    this.meteor = new THREE.Mesh(meteorGeometry, meteorMaterial);
+                    this.meteor.castShadow = true;
+                    const thetaRad = THREE.MathUtils.degToRad(theta);
+                    const phiRad = THREE.MathUtils.degToRad(phi);
+                    const startPos = new THREE.Vector3().setFromSphericalCoords(250, phiRad, thetaRad);
+                    this.meteor.position.copy(startPos);
+                    this.meteor.userData.velocity = new THREE.Vector3().subVectors(this.moon.position, this.meteor.position).normalize().multiplyScalar(velocity / 20);
+                    this.meteor.userData.mass = mass;
+                    this.scene.add(this.meteor);
+                }
+                createImpact(impactPosition, mass) {
+                    const craterRadius = mass / 2.5; const craterDepth = craterRadius / 2.5;
+                    const rimHeight = craterDepth * 0.4; const rimWidth = craterRadius * 0.3;
+                    const moonGeometry = this.moon.geometry;
+                    const positionAttribute = moonGeometry.attributes.position;
+                    const vertex = new THREE.Vector3();
+                    for (let i = 0; i < positionAttribute.count; i++) {
+                        vertex.fromBufferAttribute(positionAttribute, i);
+                        const distance = vertex.distanceTo(impactPosition);
+                        if (distance < craterRadius) {
+                            const depressionFactor = 1 - (distance / craterRadius);
+                            const smoothDepression = depressionFactor * depressionFactor * (3 - 2 * depressionFactor);
+                            const direction = vertex.clone().normalize();
+                            const displacement = direction.clone().multiplyScalar(-craterDepth * smoothDepression);
+                            vertex.add(displacement);
+                            if (distance > craterRadius - rimWidth) {
+                                const rimFactor = (distance - (craterRadius - rimWidth)) / rimWidth;
+                                const smoothRim = Math.sin(rimFactor * Math.PI);
+                                const rimDisplacement = direction.clone().multiplyScalar(rimHeight * smoothRim);
+                                vertex.add(rimDisplacement);
+                            }
+                            positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+                        }
+                    }
+                    positionAttribute.needsUpdate = true;
+                    moonGeometry.computeVertexNormals();
+                    this.createDebris(impactPosition, mass);
+                }
+                createDebris(position, mass) {
+                    const particleCount = mass * 2;
+                    for (let i = 0; i < particleCount; i++) {
+                        const particleGeometry = new THREE.SphereGeometry(Math.random() * 0.5 + 0.2, 4, 4);
+                        const particleMaterial = new THREE.MeshStandardMaterial({ color: 0x999999 });
+                        const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                        particle.position.copy(position);
+                        const velocity = new THREE.Vector3((Math.random() - 0.5) * mass / 5, (Math.random() - 0.5) * mass / 5, (Math.random() - 0.5) * mass / 5);
+                        velocity.add(position.clone().normalize().multiplyScalar(Math.random() * mass / 10));
+                        particle.userData.velocity = velocity;
+                        particle.userData.life = 100 + Math.random() * 100;
+                        this.scene.add(particle);
+                        this.particles.push(particle);
+                    }
+                }
+                reset() {
+                    this.scene.remove(this.moon);
+                    this.createMoon();
+                    this.particles.forEach(p => this.scene.remove(p));
+                    this.particles = [];
+                    if (this.meteor) { this.scene.remove(this.meteor); this.meteor = null; }
+                    document.getElementById('crater-info').innerHTML = '';
+                }
+                animate() {
+                    requestAnimationFrame(() => this.animate());
+                    if (this.meteor) {
+                        this.meteor.position.add(this.meteor.userData.velocity);
+                        const distanceToCenter = this.meteor.position.length();
+                        if (distanceToCenter <= 100) {
+                            this.createImpact(this.meteor.position, this.meteor.userData.mass);
+                            this.scene.remove(this.meteor);
+                            this.meteor = null;
+                        }
+                    }
+                    this.particles.forEach((particle, index) => {
+                        particle.position.add(particle.userData.velocity);
+                        const gravity = particle.position.clone().normalize().multiplyScalar(-0.01);
+                        particle.userData.velocity.add(gravity);
+                        particle.userData.life -= 1;
+                        if (particle.userData.life <= 0) { this.scene.remove(particle); this.particles.splice(index, 1); }
+                    });
+                    this.controls.update();
+                    this.renderer.render(this.scene, this.camera);
+                }
+                downloadResult() {
+                    this.renderer.render(this.scene, this.camera);
+                    const link = document.createElement('a');
+                    link.download = '충돌-시뮬레이션-결과.png';
+                    link.href = this.renderer.domElement.toDataURL('image/png');
+                    link.click();
+                }
+            }
+
+            const massSlider = document.getElementById('massSlider');
+            const velocitySlider = document.getElementById('velocitySlider');
+            const directionThetaSlider = document.getElementById('directionThetaSlider');
+            const directionPhiSlider = document.getElementById('directionPhiSlider');
+            const massValue = document.getElementById('massValue');
+            const velocityValue = document.getElementById('velocityValue');
+            const directionThetaValue = document.getElementById('directionThetaValue');
+            const directionPhiValue = document.getElementById('directionPhiValue');
+            const collideBtn = document.getElementById('collideBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const downloadBtn = document.getElementById('ch3_downloadBtn');
+            const craterInfo = document.getElementById('crater-info');
+
+            massSlider.addEventListener('input', (e) => massValue.textContent = e.target.value);
+            velocitySlider.addEventListener('input', (e) => velocityValue.textContent = e.target.value);
+            directionThetaSlider.addEventListener('input', (e) => directionThetaValue.textContent = e.target.value);
+            directionPhiSlider.addEventListener('input', (e) => directionPhiValue.textContent = e.target.value);
+
+            collideBtn.addEventListener('click', () => {
+                if (ch3_three_app) {
+                    const mass = parseInt(massSlider.value);
+                    const velocity = parseInt(velocitySlider.value);
+                    const theta = parseInt(directionThetaSlider.value);
+                    const phi = parseInt(directionPhiSlider.value);
+                    ch3_three_app.createCollision(mass, velocity, theta, phi);
+                    const energy = 0.5 * mass * Math.pow(velocity, 2);
+                    craterInfo.innerHTML = `<p class="text-yellow-300">충돌 에너지: ${Math.round(energy)}</p>`;
+                }
+            });
+            
+            resetBtn.addEventListener('click', () => {
+                if (ch3_three_app) ch3_three_app.reset();
+            });
+            
+            downloadBtn.addEventListener('click', () => {
+                if(ch3_three_app) ch3_three_app.downloadResult();
+            });
+
+            // --- Chapter 4: ErosionSimulation Class ---
+            class ErosionSimulation {
+                constructor(moonContainerId, earthContainerId) {
+                    this.moonContainer = document.getElementById(moonContainerId);
+                    this.earthContainer = document.getElementById(earthContainerId);
+                    this.timeDisplay = document.getElementById('ch4-time');
+                    this.startBtn = document.getElementById('ch4-start-btn');
+                    this.resetBtn = document.getElementById('ch4-reset-btn');
+
+                    this.isPlaying = false;
+                    this.elapsedTime = 0;
+                    this.animationFrameId = null;
+
+                    this.initScene('moon');
+                    this.initScene('earth');
+                    
+                    this.startBtn.onclick = () => this.start();
+                    this.resetBtn.onclick = () => this.reset();
+
+                    window.addEventListener('resize', () => {
+                        this.onWindowResize(this.moonApp);
+                        this.onWindowResize(this.earthApp);
+                    });
+                }
+
+                initScene(type) {
+                    const container = type === 'moon' ? this.moonContainer : this.earthContainer;
+                    const scene = new THREE.Scene();
+                    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                    camera.position.set(0, 8, 15);
+                    camera.lookAt(0,0,0);
+                    const renderer = new THREE.WebGLRenderer({ antialias: true });
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                    renderer.setPixelRatio(window.devicePixelRatio);
+                    container.innerHTML = '';
+                    container.appendChild(renderer.domElement);
+
+                    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    controls.target.set(0,0,0);
+
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                    scene.add(ambientLight);
+                    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                    directionalLight.position.set(5, 10, 7);
+                    scene.add(directionalLight);
+
+                    const color = type === 'moon' ? 0x888888 : 0x966919;
+                    const planetGeometry = new THREE.PlaneGeometry(20, 20, 100, 100);
+                    const planetMaterial = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 });
+                    const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+                    planet.rotation.x = -Math.PI / 2;
+                    scene.add(planet);
+
+                    const app = { container, scene, camera, renderer, controls, planet, originalVertices: [] };
+                    
+                    const positions = planet.geometry.attributes.position.array;
+                    for(let i = 0; i < positions.length; i+=3) {
+                        app.originalVertices.push({x: positions[i], y: positions[i+1], z: positions[i+2]});
+                    }
+
+                    if (type === 'moon') {
+                        this.moonApp = app;
+                    } else {
+                        this.earthApp = app;
+                        // 물 생성
+                        const waterGeo = new THREE.PlaneGeometry(20, 20);
+                        const waterMat = new THREE.MeshStandardMaterial({ color: 0x3366ff, transparent: true, opacity: 0.6 });
+                        app.water = new THREE.Mesh(waterGeo, waterMat);
+                        app.water.rotation.x = -Math.PI / 2;
+                        app.water.position.y = -1.5; // 초기 물 높이
+                        scene.add(app.water);
+                    }
+
+                    this.createCrater(app);
+                    renderer.render(scene, camera);
+                }
+
+                createCrater(app) {
+                    const geometry = app.planet.geometry;
+                    const positions = geometry.attributes.position;
+                    const center = new THREE.Vector2(0, 0);
+                    const craterRadius = 4;
+                    const craterDepth = 1.5;
+                    const rimHeight = 0.5;
+                    const rimWidth = 1.5;
+
+                    for (let i = 0; i < positions.count; i++) {
+                        const x = positions.getX(i);
+                        const y = positions.getY(i);
+                        const distance = center.distanceTo(new THREE.Vector2(x, y));
+
+                        if (distance < craterRadius + rimWidth) {
+                            let z_offset = 0;
+                            // 구덩이
+                            if (distance < craterRadius) {
+                                z_offset = -craterDepth * (1 - Math.pow(distance / craterRadius, 2));
+                            }
+                            // 왕관 모양 테두리
+                            if (distance > craterRadius - rimWidth && distance < craterRadius + rimWidth) {
+                                const rimFactor = (distance - (craterRadius - rimWidth)) / (rimWidth * 2);
+                                z_offset += rimHeight * Math.sin(rimFactor * Math.PI);
+                            }
+                            positions.setZ(i, positions.getZ(i) + z_offset);
+                        }
+                    }
+                    positions.needsUpdate = true;
+                    geometry.computeVertexNormals();
+                }
+
+                start() {
+                    if (this.isPlaying) return;
+                    this.isPlaying = true;
+                    this.startBtn.disabled = true;
+                    this.animate();
+                }
+
+                reset() {
+                    this.isPlaying = false;
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.elapsedTime = 0;
+                    this.timeDisplay.textContent = '0';
+                    this.startBtn.disabled = false;
+
+                    ['moonApp', 'earthApp'].forEach(appName => {
+                        const app = this[appName];
+                        const geometry = app.planet.geometry;
+                        const positions = geometry.attributes.position;
+                        for (let i = 0; i < app.originalVertices.length; i++) {
+                            positions.setXYZ(i, app.originalVertices[i].x, app.originalVertices[i].y, app.originalVertices[i].z);
+                        }
+                        this.createCrater(app);
+                        if(appName === 'earthApp') {
+                            app.water.position.y = -1.5;
+                        }
+                        app.renderer.render(app.scene, app.camera);
+                    });
+                }
+
+                animate() {
+                    if (!this.isPlaying) return;
+
+                    this.elapsedTime += 0.01;
+                    this.timeDisplay.textContent = Math.floor(this.elapsedTime * 10).toString();
+
+                    const earthApp = this.earthApp;
+                    
+                    // 풍화 작용 로직 개선
+                    const geometry = earthApp.planet.geometry;
+                    const positions = geometry.attributes.position;
+                    const center = new THREE.Vector2(0, 0);
+                    const craterRadius = 4;
+                    const rimWidth = 1.5;
+
+                    for (let i = 0; i < positions.count; i++) {
+                        const x = positions.getX(i);
+                        const y = positions.getY(i);
+                        const z = positions.getZ(i);
+                        const distance = center.distanceTo(new THREE.Vector2(x, y));
+
+                        // 테두리 침식 (높이가 0보다 큰 부분)
+                        if (distance < craterRadius + rimWidth && z > 0) {
+                            positions.setZ(i, z * 0.998); // 테두리를 미세하게 깎음
+                        }
+                        
+                        // 구덩이 메우기 (높이가 0보다 작은 부분)
+                        if (distance < craterRadius && z < 0) {
+                            positions.setZ(i, z * 0.9985 + 0.001); // 구덩이 바닥을 조금씩 채움
+                        }
+                    }
+                    positions.needsUpdate = true;
+                    geometry.computeVertexNormals();
+
+
+                    if (earthApp.water.position.y < -0.1) {
+                            earthApp.water.position.y += 0.001;
+                    }
+
+                    this.moonApp.controls.update();
+                    this.moonApp.renderer.render(this.moonApp.scene, this.moonApp.camera);
+                    earthApp.controls.update();
+                    earthApp.renderer.render(earthApp.scene, earthApp.camera);
+
+                    this.animationFrameId = requestAnimationFrame(() => this.animate());
+                }
+                
+                onWindowResize(app) {
+                    if (!app || !app.container) return;
+                    app.camera.aspect = app.container.clientWidth / app.container.clientHeight;
+                    app.camera.updateProjectionMatrix();
+                    app.renderer.setSize(app.container.clientWidth, app.container.clientHeight);
+                    app.renderer.render(app.scene, app.camera);
+                }
+            }
+
+            // --- Chapter 5: MoonPhaseSimulation Class ---
+            class MoonPhaseSimulation {
+                constructor(containerId) {
+                    this.container = document.getElementById(containerId);
+                    if (!this.container) return;
+                    this.dateDisplay = document.getElementById('ch5-date');
+                    this.selectedTime = 'evening'; // 현재 선택된 시간대
+                    this.isAnimating = true;
+                    this.simulationTime = 0;
+                    this.clock = new THREE.Clock();
+
+                    this.init();
+                    this.animate();
+                }
+
+                init() {
+                    this.scene = new THREE.Scene();
+                    this.camera = new THREE.PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
+                    this.camera.position.set(0, 15, 30);
+
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                    this.renderer.setPixelRatio(window.devicePixelRatio);
+                    this.container.appendChild(this.renderer.domElement);
+
+                    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+
+                    const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+                    sunLight.position.set(-100, 0, 0);
+                    this.scene.add(sunLight);
+                    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+                    this.scene.add(ambientLight);
+
+                    // 태양 생성
+                    const sunGeo = new THREE.SphereGeometry(8, 32, 32);
+                    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfdb813 });
+                    this.sun = new THREE.Mesh(sunGeo, sunMat);
+                    this.sun.position.copy(sunLight.position);
+                    this.scene.add(this.sun);
+
+                    const earthGeo = new THREE.SphereGeometry(5, 32, 32);
+                    const earthMat = new THREE.MeshStandardMaterial({ color: 0x4682B4 });
+                    this.earth = new THREE.Mesh(earthGeo, earthMat);
+                    this.scene.add(this.earth);
+
+                    const moonGeo = new THREE.SphereGeometry(1.5, 32, 32);
+                    const moonMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+                    this.moon = new THREE.Mesh(moonGeo, moonMat);
+                    this.scene.add(this.moon);
+                    
+                    const frontIndicatorGeo = new THREE.SphereGeometry(0.2, 16, 16);
+                    const frontIndicatorMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                    this.frontIndicator = new THREE.Mesh(frontIndicatorGeo, frontIndicatorMat);
+                    this.frontIndicator.position.set(0, 0, 1.5);
+                    this.moon.add(this.frontIndicator);
+
+                    // 관측자 그룹 생성
+                    this.observer = new THREE.Group();
+                    const bodyGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8);
+                    const bodyMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                    const body = new THREE.Mesh(bodyGeo, bodyMat);
+                    this.observer.add(body);
+                    const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+                    const head = new THREE.Mesh(headGeo, bodyMat);
+                    head.position.y = 0.6;
+                    this.observer.add(head);
+                    this.scene.add(this.observer); 
+
+                    // 지평선 생성
+                    const horizonGeo = new THREE.CircleGeometry(15, 32);
+                    const horizonMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+                    this.horizon = new THREE.Mesh(horizonGeo, horizonMat);
+                    this.observer.add(this.horizon);
+
+                    // 버튼 및 토글 이벤트
+                    document.getElementById('ch5-start-btn').onclick = () => this.startAnimation();
+                    document.getElementById('ch5-stop-btn').onclick = () => this.stopAnimation();
+                    document.getElementById('ch5-evening-btn').onclick = () => { this.selectedTime = 'evening'; this.updateObserverPosition(); };
+                    document.getElementById('ch5-midnight-btn').onclick = () => { this.selectedTime = 'midnight'; this.updateObserverPosition(); };
+                    document.getElementById('ch5-dawn-btn').onclick = () => { this.selectedTime = 'dawn'; this.updateObserverPosition(); };
+                    
+                    document.getElementById('ch5-new-btn').onclick = () => this.setMoonPhase('new');
+                    document.getElementById('ch5-waxing-crescent-btn').onclick = () => this.setMoonPhase('waxing_crescent');
+                    document.getElementById('ch5-first-btn').onclick = () => this.setMoonPhase('first');
+                    document.getElementById('ch5-full-btn').onclick = () => this.setMoonPhase('full');
+                    document.getElementById('ch5-third-btn').onclick = () => this.setMoonPhase('third');
+                    document.getElementById('ch5-waning-crescent-btn').onclick = () => this.setMoonPhase('waning_crescent');
+
+                    document.getElementById('ch5-sun-toggle').onchange = (e) => { this.sun.visible = e.target.checked; };
+                    document.getElementById('ch5-moon-toggle').onchange = (e) => { this.moon.visible = e.target.checked; this.frontIndicator.visible = e.target.checked; };
+                    
+                    this.updateObserverPosition(); // 초기 위치 설정
+                    window.addEventListener('resize', () => this.onWindowResize());
+                }
+                
+                startAnimation() { this.isAnimating = true; }
+                stopAnimation() { this.isAnimating = false; }
+
+                setMoonPhase(phase) {
+                    this.stopAnimation();
+                    document.querySelectorAll('.phase-btn').forEach(btn => btn.classList.remove('active'));
+                    let angle = 0;
+                    let btnId = '';
+                    switch(phase) {
+                        case 'new': angle = Math.PI; btnId = 'ch5-new-btn'; break; 
+                        case 'waxing_crescent': angle = Math.PI * 0.75; btnId = 'ch5-waxing-crescent-btn'; break;
+                        case 'first': angle = Math.PI * 0.5; btnId = 'ch5-first-btn'; break;
+                        case 'full': angle = 0; btnId = 'ch5-full-btn'; break;
+                        case 'third': angle = Math.PI * 1.5; btnId = 'ch5-third-btn'; break;
+                        case 'waning_crescent': angle = Math.PI * 1.75; btnId = 'ch5-waning-crescent-btn'; break;
+                    }
+                        if(btnId) document.getElementById(btnId).classList.add('active');
+                    const lunarCycle = 28;
+                    this.simulationTime = (angle / (2 * Math.PI)) * lunarCycle;
+                    this.updatePositions(this.simulationTime);
+                }
+
+                updateObserverPosition() {
+                    document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+                    let angle = 0;
+                    if (this.selectedTime === 'midnight') {
+                        angle = 0;
+                        document.getElementById('ch5-midnight-btn').classList.add('active');
+                    } else if (this.selectedTime === 'evening') {
+                        angle = Math.PI / 2;
+                        document.getElementById('ch5-evening-btn').classList.add('active');
+                    } else if (this.selectedTime === 'dawn') {
+                        angle = -Math.PI / 2;
+                        document.getElementById('ch5-dawn-btn').classList.add('active');
+                    }
+
+                    const earthRadius = 5;
+                    const observerPos = new THREE.Vector3(
+                        Math.cos(angle) * earthRadius,
+                        0,
+                        Math.sin(angle) * earthRadius
+                    );
+                    
+                    this.observer.position.copy(observerPos);
+                    this.observer.lookAt(this.earth.position);
+                }
+
+                updatePositions(time) {
+                    const orbitRadius = 20;
+                    const lunarCycle = 28; 
+                    const earthDay = 1; 
+
+                    const moonAngle = (time / lunarCycle) * 2 * Math.PI;
+                    const earthAngle = (time / earthDay) * 2 * Math.PI;
+
+                    // 달의 공전 (반시계)
+                    this.moon.position.x = Math.cos(moonAngle) * orbitRadius;
+                    this.moon.position.z = Math.sin(moonAngle) * orbitRadius;
+                    this.moon.rotation.y = moonAngle;
+                    
+                    this.earth.rotation.y = earthAngle; 
+                    
+                    // 관측자 위치는 지구 자전과 독립적으로 고정
+                    this.updateObserverPosition();
+                    
+                    const date = Math.floor(time % lunarCycle) + 1;
+                    this.dateDisplay.textContent = `${date}`;
+                }
+
+                animate() {
+                    requestAnimationFrame(() => this.animate());
+                    
+                    if (this.isAnimating) {
+                        this.simulationTime += this.clock.getDelta() * 0.25; // 1초에 0.25일 (속도 1/4)
+                    }
+                    
+                    this.updatePositions(this.simulationTime);
+
+                    this.controls.update();
+                    this.renderer.render(this.scene, this.camera);
+                }
+
+                onWindowResize() {
+                    if (!this.container) return;
+                    this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                }
+            }
+
+            // --- Chapter 6: SolarSystemTour Class ---
+            class SolarSystemTour {
+                constructor(containerId) {
+                    this.container = document.getElementById(containerId);
+                    this.buttonsContainer = document.getElementById('ch6-planet-buttons');
+                    this.infoTitle = document.getElementById('ch6-info-title');
+                    this.infoText = document.getElementById('ch6-info-text');
+                    if (!this.container) return;
+
+                    this.planets = {};
+                    this.planetData = {
+                        '태양': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/sunmap.jpg', size: 10, info: "태양계의 유일한 항성. 지름은 약 139만 km로 지구의 109배에 달하며, 태양계 전체 질량의 99.86%를 차지합니다. 표면 온도는 약 5,500°C에 이릅니다." },
+                        '수성': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/mercurymap.jpg', size: 1, distance: 20, info: "태양에 가장 가까운 행성으로, 대기가 거의 없어 낮과 밤의 온도 차가 극심합니다. 표면은 달처럼 충돌 구덩이가 많습니다. 공전 주기는 약 88일입니다." },
+                        '금성': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/venusmap.jpg', size: 1.5, distance: 30, info: "두꺼운 이산화탄소 대기로 덮여있어 강력한 온실 효과로 표면 온도가 약 460°C에 달하는 뜨거운 행성입니다. 자전 방향이 다른 행성들과 반대입니다." },
+                        '지구': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/earthmap1k.jpg', size: 1.6, distance: 40, info: "액체 상태의 물과 풍부한 대기가 있어 현재까지 생명체가 확인된 유일한 행성입니다. 달이라는 큰 위성을 가지고 있습니다." },
+                        '화성': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/marsmap1k.jpg', size: 1.2, distance: 50, info: "표면의 산화철 때문에 붉게 보여 '붉은 행성'이라 불립니다. 과거에 물이 흘렀던 흔적이 발견되었으며, 극지방에는 얼음으로 된 극관이 있습니다." },
+                        '목성': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/jupitermap.jpg', size: 5, distance: 70, info: "태양계에서 가장 큰 가스 행성입니다. 거대한 소용돌이인 '대적점'이 특징이며, 수많은 위성을 거느리고 있습니다. 자전 속도가 매우 빠릅니다." },
+                        '토성': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/saturnmap.jpg', ringTexture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/saturnring.png', size: 4, distance: 90, info: "얼음과 암석 조각으로 이루어진 아름다운 고리를 가지고 있습니다. 밀도가 물보다 낮아 물에 뜰 수 있는 유일한 행성입니다." },
+                        '천왕성': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/uranusmap.jpg', size: 3, distance: 110, info: "자전축이 약 98도 기울어져 거의 누워서 자전하는 것처럼 보이는 독특한 행성입니다. 메탄 성분 때문에 청록색으로 보입니다." },
+                        '해왕성': { texture: 'https://raw.githubusercontent.com/jeromeetienne/threex.planets/master/images/neptunemap.jpg', size: 2.8, distance: 130, info: "태양계의 가장 바깥쪽에 위치한 행성으로, 짙은 파란색을 띱니다. 태양계에서 가장 빠른 시속 2,100km의 강한 바람이 붑니다." },
+                    };
+                    this.textureLoader = new THREE.TextureLoader();
+                    this.init();
+                    this.animate();
+                }
+
+                init() {
+                    this.scene = new THREE.Scene();
+                    this.camera = new THREE.PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 2000);
+                    this.camera.position.set(0, 50, 150);
+                    
+                    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                    this.renderer.setPixelRatio(window.devicePixelRatio);
+                    this.container.appendChild(this.renderer.domElement);
+
+                    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                    
+                    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                    this.scene.add(ambientLight);
+
+                    Object.keys(this.planetData).forEach(name => {
+                        const data = this.planetData[name];
+                        const texture = this.textureLoader.load(data.texture);
+                        
+                        if (name === '태양') {
+                            const sunGeo = new THREE.SphereGeometry(data.size, 64, 64);
+                            const sunMat = new THREE.MeshBasicMaterial({ map: texture });
+                            const sun = new THREE.Mesh(sunGeo, sunMat);
+                            this.planets['태양'] = sun;
+                            this.scene.add(sun);
+                            const pointLight = new THREE.PointLight(0xffffff, 2, 2000);
+                            sun.add(pointLight);
+                        } else {
+                            const orbitGeo = new THREE.RingGeometry(data.distance - 0.1, data.distance + 0.1, 128);
+                            const orbitMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.3 });
+                            const orbit = new THREE.Mesh(orbitGeo, orbitMat);
+                            orbit.rotation.x = -Math.PI / 2;
+                            this.scene.add(orbit);
+
+                            const planetGeo = new THREE.SphereGeometry(data.size, 64, 64);
+                            const planetMat = new THREE.MeshStandardMaterial({ map: texture });
+                            const planet = new THREE.Mesh(planetGeo, planetMat);
+                            this.planets[name] = planet;
+                            this.scene.add(planet);
+
+                            if (name === '토성') {
+                                const ringTexture = this.textureLoader.load(data.ringTexture);
+                                const ringGeo = new THREE.RingGeometry(data.size * 1.2, data.size * 2, 64);
+                                const ringMat = new THREE.MeshBasicMaterial({ map: ringTexture, side: THREE.DoubleSide, transparent: true });
+                                const ring = new THREE.Mesh(ringGeo, ringMat);
+                                ring.rotation.x = -Math.PI / 2.5;
+                                planet.add(ring);
+                            }
+                        }
+                    });
+                    
+                    this.createButtons();
+                    window.addEventListener('resize', () => this.onWindowResize());
+                }
+
+                createButtons() {
+                    this.buttonsContainer.innerHTML = '';
+                    Object.keys(this.planetData).forEach(name => {
+                        const button = document.createElement('button');
+                        button.innerText = name;
+                        button.className = "planet-btn w-full p-2 bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900 transition-all text-sm";
+                        button.onclick = () => this.goToPlanet(name);
+                        this.buttonsContainer.appendChild(button);
+                    });
+                }
+
+                goToPlanet(name) {
+                    const targetPlanet = this.planets[name];
+                    const data = this.planetData[name];
+                    
+                    this.infoTitle.innerText = name;
+                    this.infoText.innerText = data.info;
+                    
+                    document.querySelectorAll('.planet-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.innerText === name);
+                    });
+
+                    const targetPosition = new THREE.Vector3(
+                        targetPlanet.position.x + data.size * 4,
+                        targetPlanet.position.y + data.size * 4,
+                        targetPlanet.position.z + data.size * 4
+                    );
+                    const controlsTarget = targetPlanet.position.clone();
+
+                    new TWEEN.Tween(this.camera.position)
+                        .to(targetPosition, 1500)
+                        .easing(TWEEN.Easing.Quadratic.InOut)
+                        .start();
+                    
+                    new TWEEN.Tween(this.controls.target)
+                        .to(controlsTarget, 1500)
+                        .easing(TWEEN.Easing.Quadratic.InOut)
+                        .start();
+                }
+
+                animate() {
+                    requestAnimationFrame(() => this.animate());
+                    TWEEN.update();
+
+                    const time = Date.now() * 0.0001;
+                    
+                    Object.keys(this.planets).forEach(name => {
+                        if (name === '태양') return;
+                        const planet = this.planets[name];
+                        const data = this.planetData[name];
+                        const speed = 1 / Math.sqrt(data.distance) * 5;
+                        
+                        planet.position.x = Math.cos(time * speed) * data.distance;
+                        planet.position.z = Math.sin(time * speed) * data.distance;
+                        planet.rotation.y += 0.005;
+                    });
+                    
+                    this.controls.update();
+                    this.renderer.render(this.scene, this.camera);
+                }
+
+                onWindowResize() {
+                    if (!this.container) return;
+                    this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+                }
+            }
+            
+            // --- Chapter 7: ConstellationDrawer Class ---
+            class ConstellationDrawer {
+                constructor(canvasId) {
+                    this.canvas = document.getElementById(canvasId);
+                    if (!this.canvas) {
+                        console.error(`Canvas with id ${canvasId} not found.`);
+                        return;
+                    }
+                    this.ctx = this.canvas.getContext('2d');
+
+                    this.stars = [];
+                    this.lines = [];
+                    this.drawingMode = 'stars';
+                    this.selectedStarIndex = -1;
+                    this.lineColor = '#ffffff';
+
+                    this.starRadius = 3;
+                    this.starClickTolerance = 10;
+
+                    this.bindEvents();
+                    this.updateButtonStates();
+                    this.drawAllElements(); 
+                    window.addEventListener('resize', () => this.drawAllElements());
+                }
+
+                getDistance(x1, y1, x2, y2) {
+                    const dx = x2 - x1;
+                    const dy = y2 - y1;
+                    return Math.sqrt(dx * dx + dy * dy);
+                }
+
+                findStarAtClick(clickX, clickY) {
+                    for (let i = 0; i < this.stars.length; i++) {
+                        const star = this.stars[i];
+                        if (this.getDistance(clickX, clickY, star.x, star.y) < this.starRadius + this.starClickTolerance) {
+                            return i;
+                        }
+                    }
+                    return -1;
+                }
+
+                drawAllElements() {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.canvas.width = rect.width;
+                    this.canvas.height = rect.height;
+
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                    this.lines.forEach(line => {
+                        const startStar = this.stars[line.startIndex];
+                        const endStar = this.stars[line.endIndex];
+
+                        if (startStar && endStar) {
+                            this.ctx.beginPath();
+                            this.ctx.strokeStyle = line.color;
+                            this.ctx.lineWidth = 2;
+                            this.ctx.moveTo(startStar.x, startStar.y);
+                            this.ctx.lineTo(endStar.x, endStar.y);
+                            this.ctx.stroke();
+                        }
+                    });
+
+                    this.stars.forEach((star, index) => {
+                        this.ctx.beginPath();
+                        this.ctx.arc(star.x, star.y, this.starRadius, 0, Math.PI * 2);
+                        this.ctx.fillStyle = '#fef08a';
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = '#facc15';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.stroke();
+
+                        if (this.drawingMode === 'lines' && index === this.selectedStarIndex) {
+                            this.ctx.beginPath();
+                            this.ctx.arc(star.x, star.y, this.starRadius + 4, 0, Math.PI * 2);
+                            this.ctx.strokeStyle = '#60a5fa';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.stroke();
+                        }
+                    });
+                }
+
+                handleCanvasClick(event) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = event.clientX - rect.left;
+                    const y = event.clientY - rect.top;
+
+                    if (this.drawingMode === 'stars') {
+                        this.stars.push({ x, y });
+                        this.drawAllElements();
+                    } else if (this.drawingMode === 'lines') {
+                        const clickedStarIndex = this.findStarAtClick(x, y);
+
+                        if (clickedStarIndex !== -1) {
+                            if (this.selectedStarIndex === -1) {
+                                this.selectedStarIndex = clickedStarIndex;
+                            } else {
+                                if (this.selectedStarIndex !== clickedStarIndex) {
+                                    this.lines.push({
+                                        startIndex: this.selectedStarIndex,
+                                        endIndex: clickedStarIndex,
+                                        color: this.lineColor
+                                    });
+                                }
+                                this.selectedStarIndex = -1;
+                            }
+                        } else {
+                            this.selectedStarIndex = -1;
+                        }
+                        this.drawAllElements();
+                    }
+                }
+
+                updateButtonStates() {
+                    const starButton = document.getElementById('modeStar');
+                    const lineButton = document.getElementById('modeLine');
+                    
+                    starButton.classList.remove('active');
+                    lineButton.classList.remove('active');
+
+                    if (this.drawingMode === 'stars') {
+                        starButton.classList.add('active');
+                    } else if (this.drawingMode === 'lines') {
+                        lineButton.classList.add('active');
+                    }
+                }
+                
+                download() {
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    const storyText = document.getElementById('storyText').value;
+                    const textPadding = 20;
+                    const lineHeight = 24;
+                    
+                    // 텍스트 높이 계산
+                    const textLines = storyText.split('\n');
+                    const textHeight = textLines.length * lineHeight + textPadding * 2;
+                    
+                    tempCanvas.width = this.canvas.width;
+                    tempCanvas.height = this.canvas.height + textHeight;
+                    
+                    // 배경색 채우기
+                    tempCtx.fillStyle = '#0f172a';
+                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    
+                    // 별자리 그리기
+                    tempCtx.drawImage(this.canvas, 0, 0);
+                    
+                    // 이야기 텍스트 그리기
+                    tempCtx.fillStyle = '#FFFFFF';
+                    tempCtx.font = '16px Noto Sans KR';
+                    tempCtx.textAlign = 'center';
+                    
+                    let y = this.canvas.height + textPadding + lineHeight;
+                    textLines.forEach(line => {
+                        tempCtx.fillText(line, tempCanvas.width / 2, y);
+                        y += lineHeight;
+                    });
+                    
+                    // 다운로드 링크 생성 및 클릭
+                    const link = document.createElement('a');
+                    link.download = '나의-별자리.png';
+                    link.href = tempCanvas.toDataURL('image/png');
+                    link.click();
+                }
+
+                bindEvents() {
+                    this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+
+                    document.getElementById('modeStar').addEventListener('click', () => {
+                        this.drawingMode = 'stars';
+                        this.selectedStarIndex = -1;
+                        this.updateButtonStates();
+                        this.drawAllElements();
+                    });
+
+                    document.getElementById('modeLine').addEventListener('click', () => {
+                        this.drawingMode = 'lines';
+                        this.selectedStarIndex = -1;
+                        this.updateButtonStates();
+                        this.drawAllElements();
+                    });
+
+                    document.getElementById('lineColor').addEventListener('input', (event) => {
+                        this.lineColor = event.target.value;
+                    });
+
+                    document.getElementById('clearCanvas').addEventListener('click', () => {
+                        this.stars = [];
+                        this.lines = [];
+                        this.selectedStarIndex = -1;
+                        this.drawingMode = 'stars';
+                        this.updateButtonStates();
+                        this.drawAllElements();
+                        document.getElementById('storyText').value = '';
+                    });
+                    
+                    document.getElementById('ch7_downloadBtn').addEventListener('click', () => this.download());
+                }
+            }
+            
+            // --- Chapter 8: ItemDecorator Class ---
+            class ItemDecorator extends DrawingCanvas {
+                constructor(canvasId) {
+                    super(canvasId, {color: '#FFFFFF', lineWidth: 5});
+                    if (!this.canvas) return;
+                    this._initialized = false;
+
+                    this.currentItem = 'bag';
+                    this.items = {
+                        bag: { src: 'https://i.imgur.com/4gvhJkl.png', width: 400, height: 400 },
+                        keyring: { src: 'https://i.imgur.com/DJDmjp5.png', width: 400, height: 400 },
+                        phonecase: { src: 'https://i.imgur.com/jOqSvqy.png', width: 400, height: 400 }
+                    };
+                    this.itemImage = new Image();
+                    this.itemImage.crossOrigin = "Anonymous";
+                    this.stickers = []; // {emoji, x, y, size}
+                    this.stickerPalette = ['🚀', '🪐', '⭐', '✨', '🌍', '🌕', '👽', '🛰️'];
+                    
+                    this.draggingStickerIndex = -1;
+                    this.dragOffsetX = 0;
+                    this.dragOffsetY = 0;
+                    this.paths = [];
+                    this.currentPath = null;
+                    
+                    this.bindDecoratorEvents();
+                    this.populateStickers();
+                    this._initialized = true;
+                    this.loadItem();
+                }
+
+                populateStickers() {
+                    const palette = document.getElementById('sticker-palette');
+                    palette.innerHTML = '';
+                    this.stickerPalette.forEach(emoji => {
+                        const btn = document.createElement('button');
+                        btn.innerText = emoji;
+                        btn.className = 'p-2 bg-gray-600 rounded-lg hover:bg-gray-500';
+                        btn.onclick = () => this.addSticker(emoji);
+                        palette.appendChild(btn);
+                    });
+                }
+                
+                addSticker(emoji) {
+                    this.stickers.push({
+                        emoji: emoji,
+                        x: this.canvas.width / 2,
+                        y: this.canvas.height / 2,
+                        size: 50
+                    });
+                    this.redrawAll();
+                }
+
+                loadItem() {
+                    this.itemImage.src = this.items[this.currentItem].src;
+                    this.itemImage.onload = () => {
+                        this.resizeCanvas();
+                    };
+                }
+                
+                redrawAll() {
+                    if (!this.ctx || !this.items || !this._initialized) return;
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    const item = this.items[this.currentItem];
+                    const canvasAspect = this.canvas.width / this.canvas.height;
+                    const itemAspect = item.width / item.height;
+                    let drawWidth, drawHeight, offsetX, offsetY;
+
+                    if (canvasAspect > itemAspect) {
+                        drawHeight = this.canvas.height * 0.9;
+                        drawWidth = drawHeight * itemAspect;
+                    } else {
+                        drawWidth = this.canvas.width * 0.9;
+                        drawHeight = drawWidth / itemAspect;
+                    }
+                    
+                    offsetX = (this.canvas.width - drawWidth) / 2;
+                    offsetY = (this.canvas.height - drawHeight) / 2;
+                    
+                    this.ctx.drawImage(this.itemImage, offsetX, offsetY, drawWidth, drawHeight);
+                    
+                    this.paths.forEach(path => {
+                        this.ctx.beginPath();
+                        this.ctx.strokeStyle = path.color;
+                        this.ctx.lineWidth = path.width;
+                        this.ctx.globalCompositeOperation = path.composite;
+                        this.ctx.moveTo(path.points[0].x, path.points[0].y);
+                        for (let i = 1; i < path.points.length; i++) {
+                            this.ctx.lineTo(path.points[i].x, path.points[i].y);
+                        }
+                        this.ctx.stroke();
+                    });
+                    this.ctx.globalCompositeOperation = 'source-over';
+
+                    this.stickers.forEach(sticker => {
+                        this.ctx.font = `${sticker.size}px sans-serif`;
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'middle';
+                        this.ctx.fillText(sticker.emoji, sticker.x, sticker.y);
+                    });
+                }
+                
+                resizeCanvas() {
+                    super.resizeCanvas();
+                    this.redrawAll();
+                }
+
+                clearDecorations() {
+                    this.stickers = [];
+                    this.paths = [];
+                    this.redrawAll();
+                }
+
+                downloadResult() {
+                    const link = document.createElement('a');
+                    link.download = `나만의-${this.currentItem}.png`;
+                    link.href = this.canvas.toDataURL('image/png');
+                    link.click();
+                }
+                
+                startDrawing(e) {
+                    e.preventDefault();
+                    const { x, y } = this.getPos(e);
+                    const stickerIndex = this.findStickerAtClick(x, y);
+
+                    if (stickerIndex !== -1) {
+                        this.isDrawing = false;
+                        this.draggingStickerIndex = stickerIndex;
+                        const sticker = this.stickers[stickerIndex];
+                        this.dragOffsetX = x - sticker.x;
+                        this.dragOffsetY = y - sticker.y;
+                    } else {
+                        this.isDrawing = true;
+                        this.currentPath = {
+                            color: this.ctx.strokeStyle,
+                            width: this.ctx.lineWidth,
+                            composite: this.ctx.globalCompositeOperation,
+                            points: [{ x, y }]
+                        };
+                        this.paths.push(this.currentPath);
+                    }
+                }
+
+                draw(e) {
+                    e.preventDefault();
+                    if (this.draggingStickerIndex !== -1) {
+                        const { x, y } = this.getPos(e);
+                        const sticker = this.stickers[this.draggingStickerIndex];
+                        sticker.x = x - this.dragOffsetX;
+                        sticker.y = y - this.dragOffsetY;
+                        this.redrawAll();
+                    } else if (this.isDrawing && this.currentPath) {
+                        const { x, y } = this.getPos(e);
+                        this.currentPath.points.push({ x, y });
+                        this.redrawAll();
+                    }
+                }
+
+                stopDrawing() {
+                    this.isDrawing = false;
+                    this.currentPath = null;
+                    this.draggingStickerIndex = -1;
+                }
+
+                findStickerAtClick(clickX, clickY) {
+                    for (let i = this.stickers.length - 1; i >= 0; i--) {
+                        const sticker = this.stickers[i];
+                        const halfSize = sticker.size / 2;
+                        if (clickX >= sticker.x - halfSize && clickX <= sticker.x + halfSize &&
+                            clickY >= sticker.y - halfSize && clickY <= sticker.y + halfSize) {
+                            return i;
+                        }
+                    }
+                    return -1;
+                }
+
+                bindDecoratorEvents() {
+                    this.bindEvents(); // Bind parent drawing events
+                    
+                    this.canvas.addEventListener('mousemove', (e) => {
+                            const { x, y } = this.getPos(e);
+                            if (this.findStickerAtClick(x, y) !== -1) {
+                                this.canvas.style.cursor = 'move';
+                            } else {
+                                this.canvas.style.cursor = 'crosshair';
+                            }
+                    });
+
+                    document.querySelectorAll('.item-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            this.currentItem = e.target.dataset.item;
+                            document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('active'));
+                            e.target.classList.add('active');
+                            this.clearDecorations();
+                            this.loadItem();
+                        });
+                    });
+                    
+                    document.getElementById('decorator-pen').addEventListener('click', () => {
+                        this.ctx.globalCompositeOperation = 'source-over';
+                        document.getElementById('decorator-pen').classList.add('active');
+                        document.getElementById('decorator-eraser').classList.remove('active');
+                    });
+                    document.getElementById('decorator-eraser').addEventListener('click', () => {
+                        this.ctx.globalCompositeOperation = 'destination-out';
+                        document.getElementById('decorator-eraser').classList.add('active');
+                        document.getElementById('decorator-pen').classList.remove('active');
+                    });
+                    document.getElementById('decorator-color').addEventListener('input', (e) => this.setColor(e.target.value));
+                    document.getElementById('decorator-width').addEventListener('input', (e) => this.setLineWidth(e.target.value));
+                    document.getElementById('decorator-clear').addEventListener('click', () => this.clearDecorations());
+                    document.getElementById('decorator-download').addEventListener('click', () => this.downloadResult());
+                }
+            }
+            
+            // --- Chapter 9: Quiz Class ---
+            class Quiz {
+                constructor(formId) {
+                    this.form = document.getElementById(formId);
+                    if(!this.form) return;
+                    
+                    this.answers = {
+                        q1: "둥근",
+                        q2: "충돌 구덩이",
+                        q3: "해왕성",
+                        q4: "기체",
+                        q5: "태양",
+                        'q6-1': "북두칠성",
+                        'q6-2': "작은곰자리",
+                        'q6-3': "카시오페이아",
+                        'q7-1': "상현달",
+                        'q7-2': "하현달",
+                        q8: "30"
+                    };
+                    
+                    this.modal = document.getElementById('quiz-modal');
+                    this.modalTitle = document.getElementById('quiz-result-title');
+                    this.modalFeedback = document.getElementById('quiz-feedback');
+                    
+                    this.bindEvents();
+                }
+                
+                bindEvents() {
+                    this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                    document.getElementById('quiz-close-btn').addEventListener('click', () => this.closeModal());
+                    
+                    this.form.querySelectorAll('.hint-btn').forEach(btn => {
+                        btn.addEventListener('mousedown', (e) => this.showHint(e));
+                        btn.addEventListener('mouseup', (e) => this.hideHint(e));
+                        btn.addEventListener('mouseleave', (e) => this.hideHint(e));
+                        btn.addEventListener('touchstart', (e) => this.showHint(e));
+                        btn.addEventListener('touchend', (e) => this.hideHint(e));
+                    });
+                }
+                
+                showHint(e) {
+                    const p = e.target.previousElementSibling;
+                    const inputs = p.querySelectorAll('input');
+                    const hints = e.target.dataset.hint.split(', ');
+                    inputs.forEach((input, index) => {
+                        if (hints[index]) {
+                            input.placeholder = hints[index];
+                        } else {
+                            input.placeholder = e.target.dataset.hint; // Fallback for single hints
+                        }
+                    });
+                }
+                
+                hideHint(e) {
+                        const p = e.target.previousElementSibling;
+                        const inputs = p.querySelectorAll('input');
+                        inputs.forEach(input => {
+                            input.placeholder = '';
+                        });
+                }
+
+                handleSubmit(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this.form);
+                    let correctCount = 0;
+                    let feedbackHTML = '';
+                    
+                    this.form.querySelectorAll('input[type="text"]').forEach(input => {
+                        input.classList.remove('incorrect-answer');
+                    });
+
+                    for (const [name, answer] of Object.entries(this.answers)) {
+                        const userAnswer = formData.get(name)?.trim();
+                        const input = this.form.elements[name];
+
+                        if (userAnswer === answer) {
+                            correctCount++;
+                        } else {
+                            if(input) input.classList.add('incorrect-answer');
+                            feedbackHTML += `<p>❌ ${input.closest('div').textContent.split('(')[0].trim()} - 정답: <strong>${answer}</strong></p>`;
+                        }
+                    }
+                    
+                    if (correctCount === Object.keys(this.answers).length) {
+                        this.modalTitle.textContent = '🎉 축하합니다! 모두 맞혔어요! 🎉';
+                        this.modalFeedback.innerHTML = '<p class="text-center text-green-400">당신은 진정한 우주 탐험대원입니다!</p>';
+                    } else {
+                            this.modalTitle.textContent = `🤔 다시 한번 풀어볼까요? (${correctCount} / ${Object.keys(this.answers).length} 정답)`;
+                            this.modalFeedback.innerHTML = feedbackHTML;
+                    }
+                    
+                    this.openModal();
+                }
+                
+                openModal() {
+                    this.modal.classList.remove('hidden');
+                }
+                
+                closeModal() {
+                    this.modal.classList.add('hidden');
+                }
+            }
+            
+            initChapter1();
+        });
+    -->
+</body>
+</html>

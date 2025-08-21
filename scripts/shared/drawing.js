@@ -1,0 +1,77 @@
+// --- Generic Drawing Canvas Class (Shared) ---
+export default class DrawingCanvas {
+    constructor(canvasId, options = {}) {
+        this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) { 
+            console.error(`Canvas with id ${canvasId} not found.`);
+            return; 
+        }
+        this.ctx = this.canvas.getContext('2d');
+        this.isDrawing = false; this.lastX = 0; this.lastY = 0;
+        
+        this.color = options.color || '#000000';
+        this.lineWidth = options.lineWidth || 5;
+
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.lineJoin = 'round'; this.ctx.lineCap = 'round';
+    }
+
+    bindEvents() {
+        this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+        this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+        this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+        this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+        this.canvas.addEventListener('touchstart', (e) => this.startDrawing(e), { passive: false });
+        this.canvas.addEventListener('touchmove', (e) => this.draw(e), { passive: false });
+        this.canvas.addEventListener('touchend', () => this.stopDrawing());
+    }
+
+    getPos(evt) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const touch = evt.touches ? evt.touches[0] : null;
+        return {
+            x: ((touch ? touch.clientX : evt.clientX) - rect.left) * scaleX,
+            y: ((touch ? touch.clientY : evt.clientY) - rect.top) * scaleY
+        };
+    }
+
+    startDrawing(e) { e.preventDefault(); this.isDrawing = true; const { x, y } = this.getPos(e); [this.lastX, this.lastY] = [x, y]; }
+    draw(e) { if (!this.isDrawing) return; e.preventDefault(); const { x, y } = this.getPos(e); this.ctx.beginPath(); this.ctx.moveTo(this.lastX, this.lastY); this.ctx.lineTo(x, y); this.ctx.stroke(); [this.lastX, this.lastY] = [x, y]; }
+    stopDrawing() { this.isDrawing = false; }
+
+    resizeCanvas() {
+        const container = this.canvas.parentElement;
+        if(!container) return;
+        
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        if (this.canvas.width > 0 && this.canvas.height > 0) {
+            tempCtx.drawImage(this.canvas, 0, 0);
+        }
+
+        const { width, height } = container.getBoundingClientRect();
+        this.canvas.width = width;
+        this.canvas.height = height;
+
+        if (tempCanvas.width > 0 && tempCanvas.height > 0) {
+            this.ctx.drawImage(tempCanvas, 0, 0);
+        }
+        
+        this.ctx.strokeStyle = this.color;
+        this.ctx.lineWidth = this.lineWidth;
+        this.ctx.lineJoin = 'round';
+        this.ctx.lineCap = 'round';
+    }
+
+    setTool(tool) { this.ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over'; }
+    setLineWidth(width) { this.lineWidth = width; this.ctx.lineWidth = width; }
+    setColor(color) { this.color = color; this.ctx.strokeStyle = color; }
+    download(filename) { const link = document.createElement('a'); link.download = filename; link.href = this.canvas.toDataURL('image/png'); link.click(); }
+}
+
+

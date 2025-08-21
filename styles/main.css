@@ -1,0 +1,89 @@
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    touch-action: manipulation;
+}
+.chapter-content { display: none; }
+.chapter-content.active { display: block; }
+.nav-btn { transition: all 0.2s ease-in-out; }
+.nav-btn.active {
+    background-color: #FBBF24;
+    color: #111827;
+    font-weight: bold;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.tool-btn.active, .time-btn.active, .phase-btn.active, .item-btn.active {
+    background-color: #4f46e5;
+    color: white;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #4f46e5;
+}
+.color-btn.active {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 3px white, 0 0 0 5px var(--tw-shadow-color);
+}
+#ch1_drawingCanvas, #ch2_drawingCanvas {
+    cursor: crosshair;
+}
+#constellationCanvas, #decoratorCanvas {
+    background-color: #0f172a;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    cursor: crosshair;
+}
+/* 3D 캔버스 공통 스타일 */
+.simulation-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0.5rem;
+}
+/* 행성 선택 버튼 활성화 스타일 */
+.planet-btn.active {
+    background-color: #FBBF24;
+    color: #111827;
+    font-weight: bold;
+}
+/* 토글 스위치 스타일 */
+.toggle-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+.toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider {
+    width: 40px;
+    height: 20px;
+    background-color: #6b7280;
+    border-radius: 10px;
+    transition: .4s;
+    position: relative;
+}
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .4s;
+}
+.toggle-input:checked + .toggle-slider {
+    background-color: #3b82f6;
+}
+.toggle-input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+/* 퀴즈 오답 스타일 */
+.incorrect-answer {
+    background-color: #fee2e2 !important;
+    border-color: #f87171 !important;
+    color: #991b1b !important;
+}
+
