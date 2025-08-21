@@ -26,12 +26,24 @@ class CraterSimulation {
         this.controls.update();
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         this.scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(-100, 100, 100);
-        directionalLight.castShadow = true;
-        this.scene.add(directionalLight);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        this.directionalLight.position.set(-100, 100, 100);
+        this.directionalLight.castShadow = true;
+        this.scene.add(this.directionalLight);
         this.createMoon();
         window.addEventListener('resize', () => this.onWindowResize(), false);
+    }
+    setLightByAngles(azimuthDeg, elevationDeg) {
+        const r = 200;
+        const az = THREE.MathUtils.degToRad(azimuthDeg);
+        const el = THREE.MathUtils.degToRad(elevationDeg);
+        const x = r * Math.cos(el) * Math.cos(az);
+        const y = r * Math.sin(el);
+        const z = r * Math.cos(el) * Math.sin(az);
+        if (this.directionalLight) {
+            this.directionalLight.position.set(x, y, z);
+            this.directionalLight.target = this.moon;
+        }
     }
     createMoon() {
         const moonGeometry = new THREE.SphereGeometry(100, 128, 128); 
@@ -155,6 +167,10 @@ function bindCraterUI() {
     const collideBtn = document.getElementById('collideBtn');
     const resetBtn = document.getElementById('resetBtn');
     const downloadBtn = document.getElementById('ch3_downloadBtn');
+    const lightAzimuth = document.getElementById('lightAzimuth');
+    const lightElevation = document.getElementById('lightElevation');
+    const lightAzimuthValue = document.getElementById('lightAzimuthValue');
+    const lightElevationValue = document.getElementById('lightElevationValue');
     const craterInfo = document.getElementById('crater-info');
 
     if (massSlider && massValue) {
@@ -191,6 +207,19 @@ function bindCraterUI() {
     if (downloadBtn) downloadBtn.addEventListener('click', () => {
         if(window.__ch3_three_app) window.__ch3_three_app.downloadResult();
     });
+
+    if (lightAzimuth && lightElevation) {
+        const updateLight = () => {
+            const az = parseInt(lightAzimuth.value);
+            const el = parseInt(lightElevation.value);
+            if (lightAzimuthValue) lightAzimuthValue.textContent = az.toString();
+            if (lightElevationValue) lightElevationValue.textContent = el.toString();
+            if (window.__ch3_three_app) window.__ch3_three_app.setLightByAngles(az, el);
+        };
+        lightAzimuth.addEventListener('input', updateLight);
+        lightElevation.addEventListener('input', updateLight);
+        updateLight();
+    }
 
     window.__ch3_ui_bound = true;
 }

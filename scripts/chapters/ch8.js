@@ -4,6 +4,7 @@ export function initChapter8() {
     if (!window.__ch8_item_decorator) {
         window.__ch8_item_decorator = new ItemDecorator('decoratorCanvas');
     }
+    bindDecoratorUI();
 }
 
 class ItemDecorator extends DrawingCanvas {
@@ -20,8 +21,17 @@ class ItemDecorator extends DrawingCanvas {
         };
         this.itemImage = new Image();
         this.itemImage.crossOrigin = "Anonymous";
-        this.stickers = []; // {emoji, x, y, size}
-        this.stickerPalette = ['🚀', '🪐', '⭐', '✨', '🌍', '🌕', '👽', '🛰️'];
+        this.stickers = []; // {emoji, x, y, size, rotation}
+        this.stickerPalette = [
+            // 우주/천체
+            '🚀','🛸','🛰️','🪐','☄️','🌌','🌠','⭐','✨','🌟','🌍','🌎','🌏','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔',
+            // 동물/생명체
+            '🐱','🐶','🐧','🦊','🐼','🐨','🦄','🐙','🦕','🦖','🐝','🪲',
+            // 기호/장식
+            '❤️','🧡','💛','💚','💙','💜','🤍','🤎','🖤','💫','🎈','🎉','💎','🔮','🧲',
+            // 날씨
+            '☀️','🌤️','⛅','🌥️','🌧️','⛈️','🌩️','🌫️','🌈'
+        ];
         
         this.draggingStickerIndex = -1;
         this.dragOffsetX = 0;
@@ -32,6 +42,13 @@ class ItemDecorator extends DrawingCanvas {
         this.bindDecoratorEvents();
         this.populateStickers();
         this._initialized = true;
+        this.loadItem();
+    }
+
+    setItem(itemKey) {
+        if (!this.items[itemKey]) return;
+        this.currentItem = itemKey;
+        this.clearDecorations();
         this.loadItem();
     }
 
@@ -53,7 +70,8 @@ class ItemDecorator extends DrawingCanvas {
             emoji: emoji,
             x: this.canvas.width / 2,
             y: this.canvas.height / 2,
-            size: 50
+            size: 50,
+            rotation: 0
         });
         this.redrawAll();
     }
@@ -68,24 +86,8 @@ class ItemDecorator extends DrawingCanvas {
     redrawAll() {
         if (!this.ctx || !this.items || !this._initialized) return;
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        const item = this.items[this.currentItem];
-        const canvasAspect = this.canvas.width / this.canvas.height;
-        const itemAspect = item.width / item.height;
-        let drawWidth, drawHeight, offsetX, offsetY;
-
-        if (canvasAspect > itemAspect) {
-            drawHeight = this.canvas.height * 0.9;
-            drawWidth = drawHeight * itemAspect;
-        } else {
-            drawWidth = this.canvas.width * 0.9;
-            drawHeight = drawWidth / itemAspect;
-        }
-        
-        offsetX = (this.canvas.width - drawWidth) / 2;
-        offsetY = (this.canvas.height - drawHeight) / 2;
-        
-        this.ctx.drawImage(this.itemImage, offsetX, offsetY, drawWidth, drawHeight);
+        // 아이템 이미지를 캔버스 전체(정사각형)에 꽉 채워 그립니다.
+        this.ctx.drawImage(this.itemImage, 0, 0, this.canvas.width, this.canvas.height);
         
         this.paths.forEach(path => {
             this.ctx.beginPath();
@@ -101,15 +103,32 @@ class ItemDecorator extends DrawingCanvas {
         this.ctx.globalCompositeOperation = 'source-over';
 
         this.stickers.forEach(sticker => {
+            this.ctx.save();
+            this.ctx.translate(sticker.x, sticker.y);
+            this.ctx.rotate((sticker.rotation || 0) * Math.PI / 180);
             this.ctx.font = `${sticker.size}px sans-serif`;
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(sticker.emoji, sticker.x, sticker.y);
+            this.ctx.fillText(sticker.emoji, 0, 0);
+            this.ctx.restore();
         });
     }
     
     resizeCanvas() {
-        super.resizeCanvas();
+        const container = this.canvas.parentElement;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        // 컨테이너 안쪽 여백(p-4)을 고려한 사용 가능 영역 계산
+        const padding = 16 * 2; // Tailwind p-4 = 1rem = 16px, 좌우 합산 32px
+        const usableWidth = Math.max(0, rect.width - padding);
+        const usableHeight = Math.max(0, rect.height - padding);
+        const size = Math.floor(Math.min(usableWidth, usableHeight));
+        if (size <= 0) return;
+        // 정사각형 캔버스 크기 설정 (시각적 크기와 픽셀 버퍼 일치)
+        this.canvas.width = size;
+        this.canvas.height = size;
+        this.canvas.style.width = size + 'px';
+        this.canvas.style.height = size + 'px';
         this.redrawAll();
     }
 
@@ -120,9 +139,17 @@ class ItemDecorator extends DrawingCanvas {
     }
 
     downloadResult() {
+        // 검정 배경 합성 후 다운로드 (보이는 대로 저장)
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = this.canvas.width;
+        exportCanvas.height = this.canvas.height;
+        const ex = exportCanvas.getContext('2d');
+        ex.fillStyle = '#000000';
+        ex.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        ex.drawImage(this.canvas, 0, 0);
         const link = document.createElement('a');
         link.download = `나만의-${this.currentItem}.png`;
-        link.href = this.canvas.toDataURL('image/png');
+        link.href = exportCanvas.toDataURL('image/png');
         link.click();
     }
     
@@ -137,6 +164,7 @@ class ItemDecorator extends DrawingCanvas {
             const sticker = this.stickers[stickerIndex];
             this.dragOffsetX = x - sticker.x;
             this.dragOffsetY = y - sticker.y;
+            this.gestureStart = { x, y, size: sticker.size, rotation: sticker.rotation };
         } else {
             this.isDrawing = true;
             this.currentPath = {
@@ -154,8 +182,24 @@ class ItemDecorator extends DrawingCanvas {
         if (this.draggingStickerIndex !== -1) {
             const { x, y } = this.getPos(e);
             const sticker = this.stickers[this.draggingStickerIndex];
-            sticker.x = x - this.dragOffsetX;
-            sticker.y = y - this.dragOffsetY;
+            const isRotate = e.shiftKey;
+            const isScale = e.ctrlKey || e.metaKey;
+            if (isRotate || isScale) {
+                const dx = x - this.gestureStart.x;
+                const dy = y - this.gestureStart.y;
+                if (isRotate) {
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    sticker.rotation = Math.round(this.gestureStart.rotation + angle);
+                }
+                if (isScale) {
+                    const dist = Math.hypot(dx, dy);
+                    const sign = (dx + dy) >= 0 ? 1 : -1;
+                    sticker.size = Math.max(20, Math.min(300, Math.round(this.gestureStart.size + dist * 0.3 * sign)));
+                }
+            } else {
+                sticker.x = x - this.dragOffsetX;
+                sticker.y = y - this.dragOffsetY;
+            }
             this.redrawAll();
         } else if (this.isDrawing && this.currentPath) {
             const { x, y } = this.getPos(e);
@@ -168,6 +212,7 @@ class ItemDecorator extends DrawingCanvas {
         this.isDrawing = false;
         this.currentPath = null;
         this.draggingStickerIndex = -1;
+        this.gestureStart = null;
     }
 
     findStickerAtClick(clickX, clickY) {
@@ -194,15 +239,12 @@ class ItemDecorator extends DrawingCanvas {
             }
         });
 
+        // 우측 패널 내 기존 버튼은 유지되면 동기화
         document.querySelectorAll('.item-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const nextItem = e.target.dataset.item;
-                if (this.currentItem === nextItem) return; // 동일 아이템 중복 처리 방지
-                this.currentItem = nextItem;
-                document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                this.clearDecorations();
-                this.loadItem();
+                if (this.currentItem === nextItem) return;
+                this.setItem(nextItem);
             });
         });
         
@@ -220,7 +262,30 @@ class ItemDecorator extends DrawingCanvas {
         document.getElementById('decorator-width')?.addEventListener('input', (e) => this.setLineWidth(e.target.value));
         document.getElementById('decorator-clear')?.addEventListener('click', () => this.clearDecorations());
         document.getElementById('decorator-download')?.addEventListener('click', () => this.downloadResult());
+        document.getElementById('decorator-home')?.addEventListener('click', () => {
+            const modal = document.getElementById('decorator-modal');
+            modal?.classList.remove('hidden');
+        });
     }
+}
+
+function bindDecoratorUI() {
+    // 모달 열기: 챕터 8 진입 시 자동 오픈
+    const modal = document.getElementById('decorator-modal');
+    const chapter = document.getElementById('chapter-8');
+    if (modal && chapter && chapter.classList.contains('active')) {
+        modal.classList.remove('hidden');
+    }
+    document.getElementById('decorator-modal-close')?.addEventListener('click', () => {
+        modal?.classList.add('hidden');
+    });
+    document.querySelectorAll('.decorator-item-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const item = e.target.dataset.item;
+            if (window.__ch8_item_decorator) window.__ch8_item_decorator.setItem(item);
+            modal?.classList.add('hidden');
+        });
+    });
 }
 
 

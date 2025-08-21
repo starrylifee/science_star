@@ -140,6 +140,19 @@
                             <button id="resetBtn" class="w-full p-3 bg-blue-600 rounded-lg font-bold hover:bg-blue-500 transition-transform transform hover:scale-105">새로 시작 🔄</button>
                             <button id="ch3_downloadBtn" class="w-full p-3 bg-teal-600 rounded-lg font-bold hover:bg-teal-500 transition-transform transform hover:scale-105">다운로드 🖼️</button>
                         </div>
+                        <div class="mt-2 bg-gray-800 rounded-lg p-3">
+                            <div class="text-sm text-gray-300 mb-2">조명 위치</div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <label for="lightAzimuth" class="w-20 text-gray-300 text-sm">방위각</label>
+                                <input id="lightAzimuth" type="range" min="0" max="360" value="45" class="flex-1">
+                                <span id="lightAzimuthValue" class="w-10 text-right text-yellow-300 text-sm">45</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label for="lightElevation" class="w-20 text-gray-300 text-sm">고도각</label>
+                                <input id="lightElevation" type="range" min="0" max="90" value="35" class="flex-1">
+                                <span id="lightElevationValue" class="w-10 text-right text-yellow-300 text-sm">35</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -160,10 +173,25 @@
                             <div id="ch4-earth-container" class="flex-grow w-full h-full relative"></div>
                         </div>
                     </div>
-                    <div class="flex justify-center items-center gap-4 bg-gray-800 p-4 rounded-2xl">
+                    <div class="flex flex-wrap justify-center items-center gap-4 bg-gray-800 p-4 rounded-2xl">
                         <button id="ch4-start-btn" class="px-6 py-3 bg-green-600 rounded-lg font-bold hover:bg-green-500 transition-transform transform hover:scale-105">시뮬레이션 시작 ▶️</button>
                         <button id="ch4-reset-btn" class="px-6 py-3 bg-blue-600 rounded-lg font-bold hover:bg-blue-500 transition-transform transform hover:scale-105">초기화 🔄</button>
                         <div class="text-lg">경과 시간: <span id="ch4-time" class="font-bold text-yellow-300">0</span> 백만 년</div>
+                        <div class="flex items-center gap-2">
+                            <label class="toggle-label text-sm text-gray-300">
+                                <input id="ch4-toggle-rain" type="checkbox" class="toggle-input">
+                                <span class="toggle-slider"></span>
+                                <span class="ml-2">비</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="toggle-label text-sm text-gray-300">
+                                <input id="ch4-toggle-wind" type="checkbox" class="toggle-input">
+                                <span class="toggle-slider"></span>
+                                <span class="ml-2">바람</span>
+                            </label>
+                        </div>
+                        <div class="text-lg">침식: <span id="ch4-erosion" class="font-bold text-yellow-300">100</span>%</div>
                     </div>
                 </div>
             </div>
@@ -279,21 +307,20 @@
                         <p class="text-lg text-gray-300 mt-2">가방, 열쇠고리, 핸드폰 케이스를 우주 테마로 꾸며보세요!</p>
                     </div>
                     <div class="flex flex-col lg:flex-row gap-6">
-                        <div class="flex-1 bg-gray-800 p-4 rounded-xl border-2 border-gray-700 h-[600px] relative">
-                            <canvas id="decoratorCanvas" class="w-full h-full"></canvas>
+                        <div class="flex-1 bg-gray-800 p-4 rounded-xl border-2 border-gray-700 h-[600px] relative flex justify-center items-center">
+                            <canvas id="decoratorCanvas" class="block"></canvas>
                         </div>
-                        <div class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
+                        <div class="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4 lg:h-[600px] lg:overflow-y-auto">
                             <div class="bg-gray-700 p-4 rounded-xl">
-                                    <h3 class="text-xl font-bold mb-4 text-center text-yellow-200">꾸밀 물건 선택</h3>
-                                    <div class="grid grid-cols-3 gap-2 mb-4">
-                                        <button class="item-btn p-2 bg-gray-600 rounded-lg text-sm" data-item="bag">가방</button>
-                                        <button class="item-btn p-2 bg-gray-600 rounded-lg text-sm" data-item="keyring">열쇠고리</button>
-                                        <button class="item-btn p-2 bg-gray-600 rounded-lg text-sm" data-item="phonecase">폰케이스</button>
-                                    </div>
-                            </div>
-                            <div class="bg-gray-700 p-4 rounded-xl">
-                                <h3 class="text-xl font-bold mb-4 text-center text-yellow-200">스티커</h3>
-                                <div id="sticker-palette" class="grid grid-cols-4 gap-2 text-2xl">
+                                <h3 class="text-xl font-bold mb-2 text-center text-yellow-200">스티커</h3>
+                                <p class="text-sm text-gray-200 mb-3 leading-5">
+                                    - 스티커 추가: 아래에서 클릭<br>
+                                    - 이동: 드래그<br>
+                                    - 회전: Shift + 드래그<br>
+                                    - 크기: Ctrl/⌘ + 드래그<br>
+                                    - 다운로드: 화면 그대로(검정 배경)
+                                </p>
+                                <div id="sticker-palette" class="grid grid-cols-4 gap-2 text-2xl max-h-40 overflow-y-auto pr-1">
                                     </div>
                             </div>
                             <div class="bg-gray-700 p-4 rounded-xl">
@@ -309,12 +336,28 @@
                                         <input type="range" id="decorator-width" min="1" max="30" value="5" class="w-full">
                                     </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-3 gap-3">
                                 <button id="decorator-clear" class="p-3 bg-red-600 rounded-lg font-bold">지우기</button>
                                 <button id="decorator-download" class="p-3 bg-teal-600 rounded-lg font-bold">다운로드</button>
+                                <button id="decorator-home" class="p-3 bg-gray-600 rounded-lg font-bold">처음으로</button>
                             </div>
                         </div>
                     </div>
+            </div>
+
+            <!-- Chapter 8: Item Select Modal -->
+            <div id="decorator-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+                <div class="bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
+                    <h3 class="text-2xl font-bold text-center text-yellow-200 mb-4">꾸밀 물건을 선택하세요</h3>
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <button class="decorator-item-btn p-3 bg-gray-700 hover:bg-gray-600 rounded-lg" data-item="bag">가방</button>
+                        <button class="decorator-item-btn p-3 bg-gray-700 hover:bg-gray-600 rounded-lg" data-item="keyring">열쇠고리</button>
+                        <button class="decorator-item-btn p-3 bg-gray-700 hover:bg-gray-600 rounded-lg" data-item="phonecase">폰케이스</button>
+                    </div>
+                    <div class="text-center">
+                        <button id="decorator-modal-close" class="px-4 py-2 bg-gray-600 rounded-lg">닫기</button>
+                    </div>
+                </div>
             </div>
             
             <div id="chapter-9" class="chapter-content">
@@ -347,11 +390,10 @@
                         </div>
                             <div class="flex items-center gap-2">
                             <p class="mb-2">7. 초승달 → (<input type="text" name="q7-1" class="w-20 text-center bg-gray-700 rounded mx-1">) → 보름달 → (<input type="text" name="q7-2" class="w-20 text-center bg-gray-700 rounded mx-1">) → 그믐달 순으로 달의 모양이 변합니다.</p>
-                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="상현달, 하현달">힌트 보기</button>
+                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="ㅅㅎㄷ, ㅎㅎㄷ">힌트 보기</button>
                         </div>
                             <div class="flex items-center gap-2">
                             <p class="mb-2">8. 달의 모양은 약 (<input type="text" name="q8" class="w-16 text-center bg-gray-700 rounded mx-1">)일을 주기로 변합니다.</p>
-                                <button type="button" class="hint-btn text-sm bg-gray-600 px-2 py-1 rounded" data-hint="30">힌트 보기</button>
                         </div>
 
                         <div class="text-center pt-4">

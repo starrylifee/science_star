@@ -9,18 +9,35 @@ class ErosionSimulation {
         this.moonContainer = document.getElementById(moonContainerId);
         this.earthContainer = document.getElementById(earthContainerId);
         this.timeDisplay = document.getElementById('ch4-time');
+        this.erosionDisplay = document.getElementById('ch4-erosion');
         this.startBtn = document.getElementById('ch4-start-btn');
         this.resetBtn = document.getElementById('ch4-reset-btn');
 
         this.isPlaying = false;
         this.elapsedTime = 0;
         this.animationFrameId = null;
+        this.erosionPercent = 100;
+        this.enableRain = false;
+        this.enableWind = false;
+        this.waterTime = 0;
 
         this.initScene('moon');
         this.initScene('earth');
         
         this.startBtn.onclick = () => this.start();
         this.resetBtn.onclick = () => this.reset();
+
+        // Toggles
+        const rainToggle = document.getElementById('ch4-toggle-rain');
+        const windToggle = document.getElementById('ch4-toggle-wind');
+        if (rainToggle) rainToggle.addEventListener('change', (e) => {
+            this.enableRain = !!e.target.checked;
+            if (this.earthApp && this.earthApp.rainGroup) this.earthApp.rainGroup.visible = this.enableRain;
+        });
+        if (windToggle) windToggle.addEventListener('change', (e) => {
+            this.enableWind = !!e.target.checked;
+            if (this.earthApp && this.earthApp.windGroup) this.earthApp.windGroup.visible = this.enableWind;
+        });
 
         window.addEventListener('resize', () => {
             this.onWindowResize(this.moonApp);
@@ -68,12 +85,47 @@ class ErosionSimulation {
         } else {
             this.earthApp = app;
             // 물 생성
-            const waterGeo = new THREE.PlaneGeometry(20, 20);
+            const waterGeo = new THREE.PlaneGeometry(20, 20, 64, 64);
             const waterMat = new THREE.MeshStandardMaterial({ color: 0x3366ff, transparent: true, opacity: 0.6 });
             app.water = new THREE.Mesh(waterGeo, waterMat);
             app.water.rotation.x = -Math.PI / 2;
             app.water.position.y = -1.5; // 초기 물 높이
             scene.add(app.water);
+            // 물 원본 정점 저장 (파도 애니메이션용)
+            app.waterOriginalVertices = [];
+            const wPositions = app.water.geometry.attributes.position.array;
+            for (let i = 0; i < wPositions.length; i+=3) {
+                app.waterOriginalVertices.push({x: wPositions[i], y: wPositions[i+1], z: wPositions[i+2]});
+            }
+
+            // 비 파티클
+            const rainGroup = new THREE.Group();
+            const rainMat = new THREE.MeshBasicMaterial({ color: 0x77aaff });
+            for (let i = 0; i < 150; i++) {
+                const dropGeo = new THREE.BoxGeometry(0.03, 0.3, 0.03);
+                const drop = new THREE.Mesh(dropGeo, rainMat);
+                drop.position.set((Math.random() - 0.5) * 18, Math.random() * 8 + 2, (Math.random() - 0.5) * 18);
+                drop.userData.vy = 0.1 + Math.random() * 0.15;
+                rainGroup.add(drop);
+            }
+            rainGroup.visible = false;
+            app.rainGroup = rainGroup;
+            scene.add(rainGroup);
+
+            // 바람 파티클
+            const windGroup = new THREE.Group();
+            const windMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            for (let i = 0; i < 80; i++) {
+                const puffGeo = new THREE.BoxGeometry(0.2, 0.02, 0.02);
+                const puff = new THREE.Mesh(puffGeo, windMat);
+                puff.position.set((Math.random() - 0.5) * 18, Math.random() * 4 + 0.5, (Math.random() - 0.5) * 18);
+                puff.userData.vx = 0.03 + Math.random() * 0.06;
+                puff.userData.phase = Math.random() * Math.PI * 2;
+                windGroup.add(puff);
+            }
+            windGroup.visible = false;
+            app.windGroup = windGroup;
+            scene.add(windGroup);
         }
 
         this.createCrater(app);
@@ -124,6 +176,8 @@ class ErosionSimulation {
         cancelAnimationFrame(this.animationFrameId);
         this.elapsedTime = 0;
         this.timeDisplay.textContent = '0';
+        this.erosionPercent = 100;
+        if (this.erosionDisplay) this.erosionDisplay.textContent = '100';
         this.startBtn.disabled = false;
 
         ['moonApp', 'earthApp'].forEach(appName => {
@@ -136,6 +190,8 @@ class ErosionSimulation {
             this.createCrater(app);
             if(appName === 'earthApp') {
                 app.water.position.y = -1.5;
+                if (app.rainGroup) app.rainGroup.children.forEach(d => d.position.set((Math.random() - 0.5) * 18, Math.random() * 8 + 2, (Math.random() - 0.5) * 18));
+                if (app.windGroup) app.windGroup.children.forEach(p => p.position.set((Math.random() - 0.5) * 18, Math.random() * 4 + 0.5, (Math.random() - 0.5) * 18));
             }
             app.renderer.render(app.scene, app.camera);
         });
@@ -145,6 +201,7 @@ class ErosionSimulation {
         if (!this.isPlaying) return;
 
         this.elapsedTime += 0.01;
+        this.waterTime += 0.02;
         this.timeDisplay.textContent = Math.floor(this.elapsedTime * 10).toString();
 
         const earthApp = this.earthApp;
@@ -156,6 +213,15 @@ class ErosionSimulation {
         const craterRadius = 4;
         const rimWidth = 1.5;
 
+        // 침식 속도 계수
+        const rimDecayBase = 0.998;
+        const holeFillBase = 0.9985;
+        let speedFactor = 1;
+        if (this.enableRain) speedFactor *= 1.8;
+        if (this.enableWind) speedFactor *= 1.5;
+        const rimDecay = 1 - (1 - rimDecayBase) * speedFactor;
+        const holeFill = 1 - (1 - holeFillBase) * speedFactor;
+
         for (let i = 0; i < positions.count; i++) {
             const x = positions.getX(i);
             const y = positions.getY(i);
@@ -164,25 +230,77 @@ class ErosionSimulation {
 
             // 테두리 침식 (높이가 0보다 큰 부분)
             if (distance < craterRadius + rimWidth && z > 0) {
-                positions.setZ(i, z * 0.998); // 테두리를 미세하게 깎음
+                positions.setZ(i, z * rimDecay); // 테두리를 깎음 (가속 고려)
             }
             
             // 구덩이 메우기 (높이가 0보다 작은 부분)
             if (distance < craterRadius && z < 0) {
-                positions.setZ(i, z * 0.9985 + 0.001); // 구덩이 바닥을 조금씩 채움
+                positions.setZ(i, z * holeFill + 0.001 * speedFactor); // 구덩이 바닥 채움 (가속 고려)
             }
         }
         positions.needsUpdate = true;
         geometry.computeVertexNormals();
 
         if (earthApp.water.position.y < -0.1) {
-                earthApp.water.position.y += 0.001;
+                earthApp.water.position.y += this.enableRain ? 0.003 : 0.001;
+        }
+
+        // 침식 % 감소 로직 (100 -> 0)
+        if (this.erosionPercent > 0) {
+            let decayPerFrame = 0.02; // 기본
+            if (this.enableRain) decayPerFrame += 0.08;
+            if (this.enableWind) decayPerFrame += 0.05;
+            this.erosionPercent = Math.max(0, this.erosionPercent - decayPerFrame);
+            if (this.erosionDisplay) this.erosionDisplay.textContent = Math.round(this.erosionPercent).toString();
+        }
+
+        // 물결 애니메이션
+        if (earthApp.water && earthApp.water.geometry && earthApp.waterOriginalVertices) {
+            const wGeom = earthApp.water.geometry;
+            const wAttr = wGeom.attributes.position;
+            const amplitude = this.enableRain ? 0.15 : 0.06;
+            const freq = 0.6;
+            for (let i = 0; i < wAttr.count; i++) {
+                const base = earthApp.waterOriginalVertices[i];
+                const wave = Math.sin((base.x + base.y) * freq + this.waterTime) * amplitude
+                           + Math.cos((base.x - base.y) * (freq * 0.8) + this.waterTime * 1.2) * (amplitude * 0.6);
+                wAttr.setXYZ(i, base.x, base.y, base.z + wave);
+            }
+            wAttr.needsUpdate = true;
+            wGeom.computeVertexNormals();
+        }
+
+        // 비 내리는 애니메이션
+        if (earthApp.rainGroup && earthApp.rainGroup.visible) {
+            const drift = this.enableWind ? 0.03 : 0.0;
+            earthApp.rainGroup.children.forEach(drop => {
+                drop.position.y -= drop.userData.vy;
+                drop.position.x += drift;
+                if (drop.position.y < 0) {
+                    drop.position.y = Math.random() * 8 + 2;
+                    drop.position.x = (Math.random() - 0.5) * 18;
+                    drop.position.z = (Math.random() - 0.5) * 18;
+                }
+            });
+        }
+
+        // 바람 애니메이션
+        if (earthApp.windGroup && earthApp.windGroup.visible) {
+            earthApp.windGroup.children.forEach(puff => {
+                puff.position.x += puff.userData.vx * (this.enableWind ? 1.8 : 1);
+                puff.position.y += Math.sin(this.waterTime + puff.userData.phase) * 0.005;
+                if (puff.position.x > 9) {
+                    puff.position.x = -9;
+                    puff.position.y = Math.random() * 4 + 0.5;
+                    puff.position.z = (Math.random() - 0.5) * 18;
+                }
+            });
         }
 
         this.moonApp.controls.update();
         this.moonApp.renderer.render(this.moonApp.scene, this.moonApp.camera);
         earthApp.controls.update();
-        earthApp.renderer.render(earthApp.scene, this.moonApp.camera);
+        earthApp.renderer.render(earthApp.scene, earthApp.camera);
 
         this.animationFrameId = requestAnimationFrame(() => this.animate());
     }
