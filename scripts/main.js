@@ -84,6 +84,47 @@ class DrawingCanvas {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 네비게이션 토글 기능 (기본: 닫힘)
+    const navToggle = document.getElementById('nav-toggle');
+    const chapterNav = document.getElementById('chapter-nav');
+    const navToggleText = document.getElementById('nav-toggle-text');
+
+    // 초기 텍스트/상태 설정
+    if (chapterNav) {
+        chapterNav.classList.remove('open');
+        if (navToggleText) navToggleText.textContent = '메뉴 보이기';
+        // 헤더 아래 정확한 위치로 고정되도록 top 재계산
+        const headerEl = document.querySelector('header');
+        const containerEl = document.querySelector('.max-w-7xl');
+        const setTop = () => {
+            const headerRect = headerEl ? headerEl.getBoundingClientRect() : null;
+            const scrollY = window.scrollY || window.pageYOffset || 0;
+            const baseTop = headerRect ? headerRect.top + scrollY + headerRect.height + 8 : 72;
+            chapterNav.style.top = baseTop + 'px';
+        };
+        setTop();
+        window.addEventListener('resize', setTop);
+        window.addEventListener('scroll', () => {
+            // 스크롤 시 오버레이는 컨텐츠 위에 고정 유지
+            setTop();
+        }, { passive: true });
+    }
+
+    const closeMenu = () => {
+        chapterNav.classList.remove('open');
+        if (navToggleText) navToggleText.textContent = '메뉴 보이기';
+    };
+    const openMenu = () => {
+        chapterNav.classList.add('open');
+        if (navToggleText) navToggleText.textContent = '메뉴 숨기기';
+    };
+
+    if (navToggle && chapterNav) {
+        navToggle.addEventListener('click', () => {
+            if (chapterNav.classList.contains('open')) closeMenu(); else openMenu();
+        });
+    }
+    
     const navButtons = document.querySelectorAll('.nav-btn');
     const chapterContents = document.querySelectorAll('.chapter-content');
 
@@ -105,6 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const module = await import(`./chapters/ch${chapterNumber}.js`);
             const fn = module[`initChapter${chapterNumber}`];
             if (typeof fn === 'function') fn();
+
+            // 메뉴 항목 클릭 시 자동 닫힘
+            if (chapterNav) closeMenu();
         });
     });
 

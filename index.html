@@ -10,15 +10,47 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
     <link rel="stylesheet" href="styles/main.css">
+    <style>
+        /* 네비게이션을 고정 오버레이로 표시 */
+        #chapter-nav {
+            position: fixed;
+            left: 50%;
+            top: 72px; /* 기본값, JS에서 헤더 높이에 맞춰 재설정 */
+            transform: translateX(-50%) translateY(-8px);
+            width: calc(100% - 2rem);
+            max-width: 80rem; /* 화면 중앙 컨테이너 너비와 유사 */
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 200ms ease, transform 200ms ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+        #chapter-nav.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #nav-toggle {
+            position: relative;
+            z-index: 60; /* 오버레이 위에 버튼 유지 */
+        }
+        #nav-toggle:hover {
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-white">
 
     <div class="w-full max-w-7xl mx-auto p-4">
         <header class="text-center mb-4">
             <h1 class="text-4xl md:text-5xl font-bold text-yellow-300 tracking-wider">🚀 우주 탐험대!</h1>
+            <button id="nav-toggle" class="mt-2 px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg font-bold hover:bg-yellow-300 transition-all transform hover:scale-105">
+                <span id="nav-toggle-text">메뉴 보이기</span> 📚
+            </button>
         </header>
 
-        <nav class="flex flex-wrap justify-center gap-2 mb-6 p-2 bg-gray-800 rounded-xl">
+        <nav id="chapter-nav" class="flex flex-wrap justify-center gap-2 mb-6 p-2 bg-gray-800 rounded-xl">
             <button class="nav-btn active px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="1">1. 달에서 찾은 이야기</button>
             <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="2">2. 내 손으로 그리는 보름달</button>
             <button class="nav-btn px-3 py-2 text-sm md:px-4 md:text-base bg-gray-700 rounded-lg hover:bg-yellow-400 hover:text-gray-900" data-chapter="3">3. 나만의 충돌 구덩이</button>
@@ -347,7 +379,7 @@
             </div>
 
             <!-- Chapter 8: Item Select Modal -->
-            <div id="decorator-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+            <div id="decorator-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-70 p-4">
                 <div class="bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
                     <h3 class="text-2xl font-bold text-center text-yellow-200 mb-4">꾸밀 물건을 선택하세요</h3>
                     <div class="grid grid-cols-3 gap-3 mb-4">
