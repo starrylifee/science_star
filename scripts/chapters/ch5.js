@@ -8,10 +8,14 @@ class MoonPhaseSimulation {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
         if (!this.container) return;
-        this.dateDisplay = document.getElementById('ch5-date');
+        this.dateDisplay = null; // 날짜 표시는 사용하지 않음
         this.selectedTime = 'evening'; // 현재 선택된 시간대
-        this.isAnimating = true;
-        this.simulationTime = 0;
+        this.isAnimating = false;
+        this.simulationDay = 1; // 1~28
+        this.simulationMinutes = 18 * 60; // 시각: 분 단위(초기 18:00)
+        this.simulationTime = 0; // 기존 일수 기반 시간 (위상 계산용)
+        this.speedMinutesPerSecond = 5; // 5,10,30분/초
+        this.minutesAccumulator = 0; // 5분 스텝 누적자
         this.clock = new THREE.Clock();
 
         this.init();
@@ -66,7 +70,7 @@ class MoonPhaseSimulation {
         const moonMat = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 5 });
         this.moon = new THREE.Mesh(moonGeo, moonMat);
         this.scene.add(this.moon);
-        
+
         const frontIndicatorGeo = new THREE.SphereGeometry(0.2, 16, 16);
         const frontIndicatorMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         this.frontIndicator = new THREE.Mesh(frontIndicatorGeo, frontIndicatorMat);
@@ -83,13 +87,26 @@ class MoonPhaseSimulation {
         const head = new THREE.Mesh(headGeo, bodyMat);
         head.position.y = 0.6;
         this.observer.add(head);
-        this.scene.add(this.observer); 
+        this.scene.add(this.observer);
 
         // 지평선 생성
         const horizonGeo = new THREE.CircleGeometry(15, 32);
         const horizonMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
         this.horizon = new THREE.Mesh(horizonGeo, horizonMat);
         this.observer.add(this.horizon);
+
+        // ==========================================================
+        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ '동', '서' 글자 추가 부분 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+        // ==========================================================
+        const westText = this.createTextSprite('동', { fontsize: 60, scale: 2 });
+        westText.position.set(-15, 0, 2); // 지평선 왼쪽(-X) 위
+        this.observer.add(westText);
+        
+        const eastText = this.createTextSprite('서', { fontsize: 60, scale: 2 });
+        eastText.position.set(15, 0, 2); // 지평선 오른쪽(+X) 위
+        this.observer.add(eastText);
+        // ==========================================================
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
         // 별 배경 생성 (가벼운 포인트 클라우드)
         const starGeo = new THREE.BufferGeometry();
@@ -116,12 +133,29 @@ class MoonPhaseSimulation {
         if (startBtn) startBtn.onclick = () => this.startAnimation();
         const stopBtn = document.getElementById('ch5-stop-btn');
         if (stopBtn) stopBtn.onclick = () => this.stopAnimation();
+        const speedSel = document.getElementById('ch5-speed');
+        if (speedSel) speedSel.onchange = (e) => {
+            this.speedMinutesPerSecond = parseInt(e.target.value, 10) || 5;
+            if (this.isAnimating) {
+                const badge = document.getElementById('ch5-playing');
+                if (badge) badge.textContent = (this.speedMinutesPerSecond < 0) ? '역재생중' : '재생중';
+            }
+        };
+        const stepBack = document.getElementById('ch5-step-back');
+        if (stepBack) stepBack.onclick = () => this.stepMinutes(-15);
+        const stepForward = document.getElementById('ch5-step-forward');
+        if (stepForward) stepForward.onclick = () => this.stepMinutes(15);
+        const reverseBtn = document.getElementById('ch5-reverse');
+        if (reverseBtn) reverseBtn.onclick = () => {
+            this.speedMinutesPerSecond = -Math.abs(this.speedMinutesPerSecond);
+            this.startAnimation();
+        };
         const eveningBtn = document.getElementById('ch5-evening-btn');
-        if (eveningBtn) eveningBtn.onclick = () => { this.selectedTime = 'evening'; this.updateObserverPosition(); };
+        if (eveningBtn) eveningBtn.onclick = () => this.setSelectedTime('evening');
         const midnightBtn = document.getElementById('ch5-midnight-btn');
-        if (midnightBtn) midnightBtn.onclick = () => { this.selectedTime = 'midnight'; this.updateObserverPosition(); };
+        if (midnightBtn) midnightBtn.onclick = () => this.setSelectedTime('midnight');
         const dawnBtn = document.getElementById('ch5-dawn-btn');
-        if (dawnBtn) dawnBtn.onclick = () => { this.selectedTime = 'dawn'; this.updateObserverPosition(); };
+        if (dawnBtn) dawnBtn.onclick = () => this.setSelectedTime('dawn');
 
         const newBtn = document.getElementById('ch5-new-btn');
         if (newBtn) newBtn.onclick = () => this.setMoonPhase('new');
@@ -140,9 +174,9 @@ class MoonPhaseSimulation {
         if (sunToggle) sunToggle.onchange = (e) => { this.sun.visible = e.target.checked; };
         const moonToggle = document.getElementById('ch5-moon-toggle');
         if (moonToggle) moonToggle.onchange = (e) => { this.moon.visible = e.target.checked; this.frontIndicator.visible = e.target.checked; };
-        
-        this.updateObserverPosition(); // 초기 위치 설정
-        this.updatePositions(this.simulationTime); // 초기 위상 반영
+
+        this.updateTimeButtons();
+        this.updatePositions(); // 초기 반영
         this.onWindowResize();
         requestAnimationFrame(() => {
             this.onWindowResize();
@@ -150,27 +184,70 @@ class MoonPhaseSimulation {
         });
         window.addEventListener('resize', () => this.onWindowResize());
     }
-    
-    startAnimation() { this.isAnimating = true; }
-    stopAnimation() { this.isAnimating = false; }
+
+    startAnimation() {
+        this.isAnimating = true;
+        const badge = document.getElementById('ch5-playing');
+        if (badge) {
+            badge.textContent = (this.speedMinutesPerSecond < 0) ? '역재생중' : '재생중';
+            badge.classList.remove('hidden');
+        }
+    }
+    stopAnimation() {
+        this.isAnimating = false;
+        const badge = document.getElementById('ch5-playing');
+        if (badge) badge.classList.add('hidden');
+    }
+
+    stepMinutes(delta) {
+        this.simulationMinutes += delta;
+        while (this.simulationMinutes < 0) {
+            this.simulationMinutes += 24 * 60;
+            this.simulationDay = ((this.simulationDay + 26) % 28) + 1; // -1일
+        }
+        while (this.simulationMinutes >= 24 * 60) {
+            this.simulationMinutes -= 24 * 60;
+            this.simulationDay = (this.simulationDay % 28) + 1; // +1일
+        }
+        this.updatePositions();
+    }
+
+    setSelectedTime(key) {
+        this.selectedTime = key;
+        if (key === 'evening') this.simulationMinutes = 12 * 60; // 18:00
+        else if (key === 'midnight') this.simulationMinutes = 18 * 60; // 00:00
+        else if (key === 'dawn') this.simulationMinutes = 0; // 06:00
+        // 5분 스냅
+        this.simulationMinutes = Math.round(this.simulationMinutes / 5) * 5;
+        this.updateTimeButtons();
+        this.updatePositions();
+    }
+
+    updateTimeButtons() {
+        document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+        if (this.selectedTime === 'evening') document.getElementById('ch5-evening-btn')?.classList.add('active');
+        if (this.selectedTime === 'midnight') document.getElementById('ch5-midnight-btn')?.classList.add('active');
+        if (this.selectedTime === 'dawn') document.getElementById('ch5-dawn-btn')?.classList.add('active');
+    }
 
     setMoonPhase(phase) {
         this.stopAnimation();
         document.querySelectorAll('.phase-btn').forEach(btn => btn.classList.remove('active'));
         let angle = 0;
         let btnId = '';
-        switch(phase) {
-            case 'new': angle = Math.PI; btnId = 'ch5-new-btn'; break; 
+        switch (phase) {
+            case 'new': angle = Math.PI; btnId = 'ch5-new-btn'; break;
             case 'waxing_crescent': angle = Math.PI * 0.75; btnId = 'ch5-waxing-crescent-btn'; break;
             case 'first': angle = Math.PI * 0.5; btnId = 'ch5-first-btn'; break;
             case 'full': angle = 0; btnId = 'ch5-full-btn'; break;
             case 'third': angle = Math.PI * 1.5; btnId = 'ch5-third-btn'; break;
             case 'waning_crescent': angle = Math.PI * 1.25; btnId = 'ch5-waning-crescent-btn'; break;
         }
-        if(btnId) document.getElementById(btnId)?.classList.add('active');
+        if (btnId) document.getElementById(btnId)?.classList.add('active');
         const lunarCycle = 28;
-        this.simulationTime = (angle / (2 * Math.PI)) * lunarCycle;
-        this.updatePositions(this.simulationTime);
+        const dayFloat = (angle / (2 * Math.PI)) * lunarCycle;
+        this.simulationDay = Math.max(1, Math.min(28, Math.round(dayFloat) || 1));
+        this.updatePositions();
     }
 
     updateObserverPosition() {
@@ -180,57 +257,109 @@ class MoonPhaseSimulation {
             angle = 0;
             document.getElementById('ch5-midnight-btn')?.classList.add('active');
         } else if (this.selectedTime === 'evening') {
-            angle = Math.PI / 2;
+            angle = Math.PI * 1.5; // 초저녁: 왼쪽
             document.getElementById('ch5-evening-btn')?.classList.add('active');
         } else if (this.selectedTime === 'dawn') {
-            angle = -Math.PI / 2;
+            angle = Math.PI / 2; // 새벽: 오른쪽
             document.getElementById('ch5-dawn-btn')?.classList.add('active');
         }
 
         const earthRadius = 5;
         const observerPos = new THREE.Vector3(
-            Math.cos(angle) * earthRadius,
+            Math.sin(angle) * earthRadius,
             0,
-            Math.sin(angle) * earthRadius
+            -Math.cos(angle) * earthRadius
         );
-        
+
         this.observer.position.copy(observerPos);
         this.observer.lookAt(this.earth.position);
     }
 
-    updatePositions(time) {
+    updatePositions() {
         const orbitRadius = 20;
-        const lunarCycle = 28; 
-        const earthDay = 1; 
+        const lunarCycle = 28;
+        const earthDay = 1;
 
-        const moonAngle = (time / lunarCycle) * 2 * Math.PI;
-        const earthAngle = (time / earthDay) * 2 * Math.PI;
+        // 1) 위상/공전: 날짜 + 시각 기반 (밤 동안에도 달이 약간 이동)
+        const dayIndex = this.simulationDay - 1; // 0~27
+        const dayFraction = (this.simulationMinutes / (24 * 60));
+        const moonAngle = ((dayIndex + dayFraction) / lunarCycle) * 2 * Math.PI;
+        // 2) 지구 자전: 시각 기반 (자정 기준). 관측자는 지구 표면에 고정되어 자전과 함께 회전해야 함
+        const earthAngle = ((this.simulationMinutes / (24 * 60)) / earthDay) * 2 * Math.PI;
 
         // 달의 공전 (반시계)
         this.moon.position.x = Math.cos(moonAngle) * orbitRadius;
         this.moon.position.z = Math.sin(moonAngle) * orbitRadius;
         this.moon.rotation.y = moonAngle;
-        
-        this.earth.rotation.y = earthAngle; 
-        
-        // 관측자 위치는 지구 자전과 독립적으로 고정
-        this.updateObserverPosition();
-        
-        const date = Math.floor(time % lunarCycle) + 1;
-        if (this.dateDisplay) this.dateDisplay.textContent = `${date}`;
+
+        // 지구 자전 방향을 반시계로 보이도록 반전
+        this.earth.rotation.y = -earthAngle;
+        // 관측자는 지구 자전과 함께 회전 (초저녁: 왼쪽, 새벽: 오른쪽)
+        const earthRadius = 5;
+        const observerPos = new THREE.Vector3(
+            -Math.sin(earthAngle) * earthRadius,
+            0,
+            -Math.cos(earthAngle) * earthRadius
+        );
+        this.observer.position.copy(observerPos);
+        this.observer.lookAt(this.earth.position);
+        this.observer.rotateX(Math.PI / 2);
+        this.horizon.rotation.x = -Math.PI / 2;
+
+        // 날짜/시각 표시는 하지 않음
     }
 
     animate() {
         requestAnimationFrame(() => this.animate());
-        
+
         if (this.isAnimating) {
-            this.simulationTime += this.clock.getDelta() * 0.25; // 1초에 0.25일 (속도 1/4)
+            const dt = this.clock.getDelta();
+            const advance = this.speedMinutesPerSecond * dt; // 분/초 * 초 = 분 (역재생 가능)
+            this.minutesAccumulator += advance;
+            const step = 5; // 5분 단위 스냅
+            while (this.minutesAccumulator >= step) {
+                this.stepMinutes(step);
+                this.minutesAccumulator -= step;
+            }
+            while (this.minutesAccumulator <= -step) {
+                this.stepMinutes(-step);
+                this.minutesAccumulator += step;
+            }
         }
-        
-        this.updatePositions(this.simulationTime);
+
+        // stepMinutes 내부에서 updatePositions 호출됨
 
         this.controls.update();
         this.renderer.render(this.scene, this.camera);
+    }
+
+    // ==========================================================
+    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ '동', '서' 글자 생성 함수 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+    // ==========================================================
+    createTextSprite(text, options = {}) {
+        const fontface = options.fontface || 'Arial';
+        const fontsize = options.fontsize || 24;
+        const fontColor = options.fontColor || { r: 255, g: 255, b: 0, a: 1.0 }; // 노란색 기본값
+        const scale = options.scale || 1.0;
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 256;
+        canvas.height = 128;
+        context.font = `Bold ${fontsize}px ${fontface}`;
+        
+        context.fillStyle = `rgba(${fontColor.r}, ${fontColor.g}, ${fontColor.b}, ${fontColor.a})`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        
+        sprite.scale.set(scale * 5, scale * 2.5, 1.0);
+
+        return sprite;
     }
 
     onWindowResize() {
@@ -243,5 +372,3 @@ class MoonPhaseSimulation {
         this.renderer.setSize(w, h);
     }
 }
-
-

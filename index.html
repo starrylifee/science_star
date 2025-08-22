@@ -212,19 +212,8 @@
                                 <button id="ch5-start-btn" class="px-4 py-2 bg-green-600 rounded-lg font-bold hover:bg-green-500">시작 ▶️</button>
                                 <button id="ch5-stop-btn" class="px-4 py-2 bg-red-600 rounded-lg font-bold hover:bg-red-500">정지 ⏸️</button>
                             </div>
-                            <div class="text-lg">날짜: <span id="ch5-date" class="font-bold text-yellow-300">1</span> 일</div>
-                            <div class="flex gap-4">
-                                <label class="toggle-label text-sm">
-                                    <input type="checkbox" id="ch5-sun-toggle" class="toggle-input" checked>
-                                    <span class="toggle-slider"></span>
-                                    <span class="ml-2">태양 보기</span>
-                                </label>
-                                <label class="toggle-label text-sm">
-                                    <input type="checkbox" id="ch5-moon-toggle" class="toggle-input" checked>
-                                    <span class="toggle-slider"></span>
-                                    <span class="ml-2">달 보기</span>
-                                </label>
-                            </div>
+                            <span id="ch5-playing" class="text-xs px-2 py-1 rounded bg-green-700 text-white hidden">재생 중...</span>
+                            <!-- 날짜/시각 표시 제거 -->
                         </div>
                         <hr class="border-gray-600 my-2">
                         <div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-2">
@@ -233,6 +222,19 @@
                                 <button id="ch5-evening-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">초저녁</button>
                                 <button id="ch5-midnight-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">자정</button>
                                 <button id="ch5-dawn-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">새벽</button>
+                            </div>
+                            <div class="flex items-center gap-2 ml-2">
+                                <label for="ch5-speed" class="text-sm">속도</label>
+                                <select id="ch5-speed" class="bg-gray-700 rounded px-2 py-1 text-sm">
+                                    <option value="5">5분/초</option>
+                                    <option value="10">10분/초</option>
+                                    <option value="30">30분/초</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2 ml-2">
+                                <button id="ch5-step-back" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">-15분</button>
+                                <button id="ch5-step-forward" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">+15분</button>
+                                <button id="ch5-reverse" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">역재생 ◀︎</button>
                             </div>
                             <div class="text-sm font-bold ml-4">위상 선택:</div>
                             <div class="flex flex-wrap gap-2 justify-center">
@@ -318,7 +320,6 @@
                                     - 이동: 드래그<br>
                                     - 회전: Shift + 드래그<br>
                                     - 크기: Ctrl/⌘ + 드래그<br>
-                                    - 다운로드: 화면 그대로(검정 배경)
                                 </p>
                                 <div id="sticker-palette" class="grid grid-cols-4 gap-2 text-2xl max-h-40 overflow-y-auto pr-1">
                                     </div>
