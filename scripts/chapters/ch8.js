@@ -39,8 +39,16 @@ class ItemDecorator extends DrawingCanvas {
         this.draggingStickerIndex = -1;
         this.dragOffsetX = 0;
         this.dragOffsetY = 0;
+        // 드로잉(펜/지우개) 전용 오버레이 버퍼 캔버스
+        this.overlay = document.createElement('canvas');
+        this.overlayCtx = this.overlay.getContext('2d');
+        this.overlayCtx.lineJoin = 'round';
+        this.overlayCtx.lineCap = 'round';
+        this.toolComposite = 'source-over'; // 'pen' 기본값
+
         this.paths = [];
         this.currentPath = null;
+        this.selectedStickerIndex = -1;
         
         this.bindDecoratorEvents();
         this.populateStickers();
@@ -118,19 +126,10 @@ class ItemDecorator extends DrawingCanvas {
             this.ctx.fillStyle = '#000000';
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
-        
-        this.paths.forEach(path => {
-            this.ctx.beginPath();
-            this.ctx.strokeStyle = path.color;
-            this.ctx.lineWidth = path.width;
-            this.ctx.globalCompositeOperation = path.composite;
-            this.ctx.moveTo(path.points[0].x, path.points[0].y);
-            for (let i = 1; i < path.points.length; i++) {
-                this.ctx.lineTo(path.points[i].x, path.points[i].y);
-            }
-            this.ctx.stroke();
-        });
+
+        // 오버레이(펜/지우개 결과) 합성
         this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.drawImage(this.overlay, 0, 0);
 
         this.stickers.forEach(sticker => {
             this.ctx.save();
@@ -141,6 +140,25 @@ class ItemDecorator extends DrawingCanvas {
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(sticker.emoji, 0, 0);
             this.ctx.restore();
+        });
+    }
+
+    rebuildOverlayFromPaths() {
+        if (!this.overlayCtx) return;
+        this.overlayCtx.clearRect(0, 0, this.overlay.width, this.overlay.height);
+        this.paths.forEach(path => {
+            if (!path.points || path.points.length < 2) return;
+            this.overlayCtx.save();
+            this.overlayCtx.strokeStyle = path.color;
+            this.overlayCtx.lineWidth = path.width;
+            this.overlayCtx.globalCompositeOperation = path.composite;
+            this.overlayCtx.beginPath();
+            this.overlayCtx.moveTo(path.points[0].x, path.points[0].y);
+            for (let i = 1; i < path.points.length; i++) {
+                this.overlayCtx.lineTo(path.points[i].x, path.points[i].y);
+            }
+            this.overlayCtx.stroke();
+            this.overlayCtx.restore();
         });
     }
 
@@ -218,12 +236,19 @@ class ItemDecorator extends DrawingCanvas {
         this.canvas.height = size;
         this.canvas.style.width = size + 'px';
         this.canvas.style.height = size + 'px';
+        // 오버레이 캔버스도 동일 크기로 맞추고, 저장된 경로로 재구성
+        this.overlay.width = size;
+        this.overlay.height = size;
+        this.overlayCtx.lineJoin = 'round';
+        this.overlayCtx.lineCap = 'round';
+        this.rebuildOverlayFromPaths();
         this.redrawAll();
     }
 
     clearDecorations() {
         this.stickers = [];
         this.paths = [];
+        if (this.overlayCtx) this.overlayCtx.clearRect(0, 0, this.overlay.width, this.overlay.height);
         this.redrawAll();
     }
 
@@ -250,6 +275,7 @@ class ItemDecorator extends DrawingCanvas {
         if (stickerIndex !== -1) {
             this.isDrawing = false;
             this.draggingStickerIndex = stickerIndex;
+            this.selectedStickerIndex = stickerIndex;
             const sticker = this.stickers[stickerIndex];
             this.dragOffsetX = x - sticker.x;
             this.dragOffsetY = y - sticker.y;
@@ -257,12 +283,23 @@ class ItemDecorator extends DrawingCanvas {
         } else {
             this.isDrawing = true;
             this.currentPath = {
-                color: this.ctx.strokeStyle,
-                width: this.ctx.lineWidth,
-                composite: this.ctx.globalCompositeOperation,
+                color: this.color,
+                width: this.lineWidth,
+                composite: this.toolComposite,
                 points: [{ x, y }]
             };
             this.paths.push(this.currentPath);
+            // 즉시 오버레이에 점 시작 위치 반영(도트 클릭 시 표시 안정성)
+            this.overlayCtx.save();
+            this.overlayCtx.strokeStyle = this.currentPath.color;
+            this.overlayCtx.lineWidth = this.currentPath.width;
+            this.overlayCtx.globalCompositeOperation = this.currentPath.composite;
+            this.overlayCtx.beginPath();
+            this.overlayCtx.moveTo(x, y);
+            this.overlayCtx.lineTo(x, y);
+            this.overlayCtx.stroke();
+            this.overlayCtx.restore();
+            this.selectedStickerIndex = -1;
         }
     }
 
@@ -292,7 +329,18 @@ class ItemDecorator extends DrawingCanvas {
             this.redrawAll();
         } else if (this.isDrawing && this.currentPath) {
             const { x, y } = this.getPos(e);
+            const last = this.currentPath.points[this.currentPath.points.length - 1];
             this.currentPath.points.push({ x, y });
+            // 오버레이에 현재 세그먼트만 그리기
+            this.overlayCtx.save();
+            this.overlayCtx.strokeStyle = this.currentPath.color;
+            this.overlayCtx.lineWidth = this.currentPath.width;
+            this.overlayCtx.globalCompositeOperation = this.currentPath.composite;
+            this.overlayCtx.beginPath();
+            this.overlayCtx.moveTo(last.x, last.y);
+            this.overlayCtx.lineTo(x, y);
+            this.overlayCtx.stroke();
+            this.overlayCtx.restore();
             this.redrawAll();
         }
     }
@@ -328,6 +376,28 @@ class ItemDecorator extends DrawingCanvas {
             }
         });
 
+        // 스티커 우클릭 삭제
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const { x, y } = this.getPos(e);
+            const idx = this.findStickerAtClick(x, y);
+            if (idx !== -1) {
+                this.stickers.splice(idx, 1);
+                this.selectedStickerIndex = -1;
+                this.redrawAll();
+            }
+        });
+
+        // 키보드(Delete/Backspace)로 선택된 스티커 삭제
+        window.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedStickerIndex !== -1) {
+                e.preventDefault();
+                this.stickers.splice(this.selectedStickerIndex, 1);
+                this.selectedStickerIndex = -1;
+                this.redrawAll();
+            }
+        });
+
         // 우측 패널 내 기존 버튼은 유지되면 동기화
         document.querySelectorAll('.item-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -338,12 +408,12 @@ class ItemDecorator extends DrawingCanvas {
         });
         
         document.getElementById('decorator-pen')?.addEventListener('click', () => {
-            this.ctx.globalCompositeOperation = 'source-over';
+            this.toolComposite = 'source-over';
             document.getElementById('decorator-pen')?.classList.add('active');
             document.getElementById('decorator-eraser')?.classList.remove('active');
         });
         document.getElementById('decorator-eraser')?.addEventListener('click', () => {
-            this.ctx.globalCompositeOperation = 'destination-out';
+            this.toolComposite = 'destination-out';
             document.getElementById('decorator-eraser')?.classList.add('active');
             document.getElementById('decorator-pen')?.classList.remove('active');
         });
