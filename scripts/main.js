@@ -157,6 +157,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const module = await import('./chapters/ch1.js');
         module.initChapter1();
     })();
+
+    // 전역 사용 가이드 모달 열기/닫기
+    const guideOpenBtn = document.getElementById('guide-open');
+    const guideCloseBtn = document.getElementById('guide-close');
+    const guideModal = document.getElementById('guide-modal');
+    if (guideOpenBtn && guideModal) {
+        guideOpenBtn.addEventListener('click', () => {
+            guideModal.classList.remove('hidden');
+        });
+    }
+    if (guideCloseBtn && guideModal) {
+        guideCloseBtn.addEventListener('click', () => {
+            guideModal.classList.add('hidden');
+        });
+    }
+    if (guideModal) {
+        guideModal.addEventListener('click', (e) => {
+            if (e.target === guideModal) guideModal.classList.add('hidden');
+        });
+    }
 });
 
 

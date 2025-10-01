@@ -45,9 +45,12 @@
     <div class="w-full max-w-7xl mx-auto p-4">
         <header class="text-center mb-4">
             <h1 class="text-4xl md:text-5xl font-bold text-yellow-300 tracking-wider">🚀 우주 탐험대!</h1>
-            <button id="nav-toggle" class="mt-2 px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg font-bold hover:bg-yellow-300 transition-all transform hover:scale-105">
+            <div class="mt-2 flex items-center justify-center gap-2">
+                <button id="nav-toggle" class="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg font-bold hover:bg-yellow-300 transition-all transform hover:scale-105">
                 <span id="nav-toggle-text">메뉴 보이기</span> 📚
-            </button>
+                </button>
+                <button id="guide-open" class="px-4 py-2 bg-indigo-500 rounded-lg font-bold hover:bg-indigo-400 transition-all">사용 가이드 ❓</button>
+            </div>
         </header>
 
         <nav id="chapter-nav" class="flex flex-wrap justify-center gap-2 mb-6 p-2 bg-gray-800 rounded-xl">
@@ -449,6 +452,31 @@
 
         </main>
     </div>
+
+    <!-- Global Usage Guide Modal -->
+    <div id="guide-modal" class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-black bg-opacity-70 p-4">
+        <div class="bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-2xl">
+            <h3 class="text-2xl font-bold text-yellow-200 mb-4 text-center">사용 가이드</h3>
+            <div class="space-y-4 text-gray-200 text-sm leading-6">
+                <div>
+                    <h4 class="font-semibold text-white mb-1">전체(챕터 1~9)</h4>
+                    <ol class="list-decimal list-inside">
+                        <li>상단 ‘메뉴 보이기’ 버튼으로 원하는 챕터를 선택해 순서대로 따라갑니다.</li>
+                        <li>본 프로그램은 천재교과서 과학 4-2(이상원) 차시 순서를 따릅니다.</li>
+                        <li>기타: 결과 저장/다운로드 제공, 화면 크기에 자동 대응, 최신 브라우저(Chrome/Edge) 권장.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="text-center mt-6">
+                <button id="guide-close" class="px-4 py-2 bg-gray-600 rounded-lg font-bold hover:bg-gray-500">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="w-full py-4 mt-6 text-center text-sm text-gray-400 border-t border-gray-700">
+        <span>© 서울신답초등학교 정용석 · </span>
+        <a href="mailto:forinnocen@sen.go.kr" class="underline hover:text-gray-300">forinnocen@sen.go.kr</a>
+    </footer>
 
     <script type="module" src="scripts/main.js"></script>
     <!--
