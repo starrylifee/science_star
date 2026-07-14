@@ -387,7 +387,7 @@ class MoonPhaseSimulation {
         });
         dom.addEventListener('pointermove', (e) => {
             if (!dragging) return;
-            this.skyYaw -= (e.clientX - lastX) * 0.005;
+            this.skyYaw += (e.clientX - lastX) * 0.005; // 하늘이 드래그 방향을 따라오도록
             this.skyPitch = Math.min(1.35, Math.max(-0.12, this.skyPitch + (e.clientY - lastY) * 0.004));
             lastX = e.clientX; lastY = e.clientY;
         });
