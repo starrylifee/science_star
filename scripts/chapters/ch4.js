@@ -66,9 +66,45 @@ class ErosionSimulation {
         directionalLight.position.set(5, 10, 7);
         scene.add(directionalLight);
 
-        const color = type === 'moon' ? 0x888888 : 0x966919;
+        const textureLoader = new THREE.TextureLoader();
+        let planetMaterial;
+        if (type === 'moon') {
+            // 달 표면: 실제 달 텍스처 + 요철(bump)
+            // 텍스처 로드 완료 시 재렌더 (정지 상태에서도 바로 보이도록)
+            const rerender = () => renderer.render(scene, camera);
+            const moonTex = textureLoader.load('assets/textures/2k_moon.jpg', rerender);
+            moonTex.wrapS = moonTex.wrapT = THREE.RepeatWrapping;
+            moonTex.repeat.set(1.5, 1.5);
+            planetMaterial = new THREE.MeshStandardMaterial({ map: moonTex, bumpMap: moonTex, bumpScale: 0.6, roughness: 0.95 });
+            // 달 하늘: 별이 보이는 우주 배경
+            const skyGeo = new THREE.SphereGeometry(400, 32, 24);
+            const skyMat = new THREE.MeshBasicMaterial({
+                map: textureLoader.load('assets/textures/2k_stars_milky_way.jpg', rerender),
+                side: THREE.BackSide, color: 0x666677
+            });
+            scene.add(new THREE.Mesh(skyGeo, skyMat));
+        } else {
+            // 지구 지표: 절차적 흙 텍스처 (노이즈 캔버스)
+            const soilCanvas = document.createElement('canvas');
+            soilCanvas.width = soilCanvas.height = 512;
+            const sctx = soilCanvas.getContext('2d');
+            sctx.fillStyle = '#8a6a3f';
+            sctx.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 9000; i++) {
+                const shade = 90 + Math.floor(Math.random() * 70);
+                sctx.fillStyle = `rgba(${shade + 30}, ${shade}, ${Math.floor(shade * 0.6)}, ${0.15 + Math.random() * 0.25})`;
+                const s = 1 + Math.random() * 4;
+                sctx.fillRect(Math.random() * 512, Math.random() * 512, s, s);
+            }
+            const soilTex = new THREE.CanvasTexture(soilCanvas);
+            soilTex.wrapS = soilTex.wrapT = THREE.RepeatWrapping;
+            soilTex.repeat.set(2, 2);
+            planetMaterial = new THREE.MeshStandardMaterial({ map: soilTex, bumpMap: soilTex, bumpScale: 0.15, roughness: 0.9 });
+            // 지구 하늘: 맑은 하늘색 + 원거리 안개
+            scene.background = new THREE.Color(0x87b5e0);
+            scene.fog = new THREE.Fog(0x87b5e0, 30, 120);
+        }
         const planetGeometry = new THREE.PlaneGeometry(20, 20, 100, 100);
-        const planetMaterial = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 });
         const planet = new THREE.Mesh(planetGeometry, planetMaterial);
         planet.rotation.x = -Math.PI / 2;
         scene.add(planet);
@@ -86,7 +122,10 @@ class ErosionSimulation {
             this.earthApp = app;
             // 물 생성
             const waterGeo = new THREE.PlaneGeometry(20, 20, 64, 64);
-            const waterMat = new THREE.MeshStandardMaterial({ color: 0x3366ff, transparent: true, opacity: 0.6 });
+            const waterMat = new THREE.MeshPhongMaterial({
+                color: 0x2e6fbe, transparent: true, opacity: 0.65,
+                shininess: 120, specular: 0xaaccff
+            });
             app.water = new THREE.Mesh(waterGeo, waterMat);
             app.water.rotation.x = -Math.PI / 2;
             app.water.position.y = -1.5; // 초기 물 높이
@@ -100,9 +139,9 @@ class ErosionSimulation {
 
             // 비 파티클
             const rainGroup = new THREE.Group();
-            const rainMat = new THREE.MeshBasicMaterial({ color: 0x77aaff });
-            for (let i = 0; i < 150; i++) {
-                const dropGeo = new THREE.BoxGeometry(0.03, 0.3, 0.03);
+            const rainMat = new THREE.MeshBasicMaterial({ color: 0xbbddff, transparent: true, opacity: 0.5 });
+            const dropGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.45, 4);
+            for (let i = 0; i < 200; i++) {
                 const drop = new THREE.Mesh(dropGeo, rainMat);
                 drop.position.set((Math.random() - 0.5) * 18, Math.random() * 8 + 2, (Math.random() - 0.5) * 18);
                 drop.userData.vy = 0.1 + Math.random() * 0.15;
@@ -114,10 +153,22 @@ class ErosionSimulation {
 
             // 바람 파티클
             const windGroup = new THREE.Group();
-            const windMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            // 바람: 부드러운 반투명 안개 입자 (스프라이트)
+            const puffCanvas = document.createElement('canvas');
+            puffCanvas.width = puffCanvas.height = 64;
+            const pctx = puffCanvas.getContext('2d');
+            const pGrad = pctx.createRadialGradient(32, 32, 4, 32, 32, 32);
+            pGrad.addColorStop(0, 'rgba(255,255,255,0.7)');
+            pGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            pctx.fillStyle = pGrad;
+            pctx.fillRect(0, 0, 64, 64);
+            const puffMat = new THREE.SpriteMaterial({
+                map: new THREE.CanvasTexture(puffCanvas),
+                transparent: true, opacity: 0.35, depthWrite: false
+            });
             for (let i = 0; i < 80; i++) {
-                const puffGeo = new THREE.BoxGeometry(0.2, 0.02, 0.02);
-                const puff = new THREE.Mesh(puffGeo, windMat);
+                const puff = new THREE.Sprite(puffMat);
+                puff.scale.set(0.8 + Math.random() * 0.8, 0.25 + Math.random() * 0.2, 1);
                 puff.position.set((Math.random() - 0.5) * 18, Math.random() * 4 + 0.5, (Math.random() - 0.5) * 18);
                 puff.userData.vx = 0.03 + Math.random() * 0.06;
                 puff.userData.phase = Math.random() * Math.PI * 2;

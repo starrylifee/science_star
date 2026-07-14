@@ -54,20 +54,38 @@ class MoonPhaseSimulation {
         const hemiLight = new THREE.HemisphereLight(0x88aaff, 0x223355, 0.6);
         this.scene.add(hemiLight);
 
-        // 태양 생성
-        const sunGeo = new THREE.SphereGeometry(8, 32, 32);
-        const sunMat = new THREE.MeshBasicMaterial({ color: 0xfdb813 });
+        const textureLoader = new THREE.TextureLoader();
+
+        // 태양 생성 (실제 표면 텍스처 + 발광 글로우)
+        const sunGeo = new THREE.SphereGeometry(8, 48, 48);
+        const sunMat = new THREE.MeshBasicMaterial({ map: textureLoader.load('assets/textures/2k_sun.jpg') });
         this.sun = new THREE.Mesh(sunGeo, sunMat);
         this.sun.position.copy(sunLight.position);
         this.scene.add(this.sun);
 
-        const earthGeo = new THREE.SphereGeometry(5, 32, 32);
-        const earthMat = new THREE.MeshPhongMaterial({ color: 0x4682B4, shininess: 10 });
+        const glowCanvas = document.createElement('canvas');
+        glowCanvas.width = glowCanvas.height = 256;
+        const gctx = glowCanvas.getContext('2d');
+        const grad = gctx.createRadialGradient(128, 128, 30, 128, 128, 128);
+        grad.addColorStop(0, 'rgba(255, 220, 120, 0.8)');
+        grad.addColorStop(0.5, 'rgba(255, 160, 40, 0.25)');
+        grad.addColorStop(1, 'rgba(255, 120, 0, 0)');
+        gctx.fillStyle = grad;
+        gctx.fillRect(0, 0, 256, 256);
+        const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: new THREE.CanvasTexture(glowCanvas),
+            transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        sunGlow.scale.set(30, 30, 1);
+        this.sun.add(sunGlow);
+
+        const earthGeo = new THREE.SphereGeometry(5, 48, 48);
+        const earthMat = new THREE.MeshPhongMaterial({ map: textureLoader.load('assets/textures/2k_earth_daymap.jpg'), shininess: 10 });
         this.earth = new THREE.Mesh(earthGeo, earthMat);
         this.scene.add(this.earth);
 
-        const moonGeo = new THREE.SphereGeometry(1.5, 32, 32);
-        const moonMat = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 5 });
+        const moonGeo = new THREE.SphereGeometry(1.5, 48, 48);
+        const moonMat = new THREE.MeshPhongMaterial({ map: textureLoader.load('assets/textures/2k_moon.jpg'), shininess: 2 });
         this.moon = new THREE.Mesh(moonGeo, moonMat);
         this.scene.add(this.moon);
 
@@ -108,25 +126,50 @@ class MoonPhaseSimulation {
         // ==========================================================
         // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-        // 별 배경 생성 (가벼운 포인트 클라우드)
-        const starGeo = new THREE.BufferGeometry();
-        const starCount = 500;
-        const positions = new Float32Array(starCount * 3);
-        for (let i = 0; i < starCount; i++) {
-            const r = 200 + Math.random() * 300;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos((Math.random() * 2) - 1);
-            const x = r * Math.sin(phi) * Math.cos(theta);
-            const y = r * Math.sin(phi) * Math.sin(theta);
-            const z = r * Math.cos(phi);
-            positions[i * 3] = x;
-            positions[i * 3 + 1] = y;
-            positions[i * 3 + 2] = z;
-        }
-        starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1, sizeAttenuation: true });
-        const stars = new THREE.Points(starGeo, starMat);
-        this.scene.add(stars);
+        // 은하수 배경 (안쪽에서 보이는 대형 구, 어둡게 처리)
+        const skyGeo = new THREE.SphereGeometry(700, 48, 32);
+        const skyMat = new THREE.MeshBasicMaterial({
+            map: textureLoader.load('assets/textures/2k_stars_milky_way.jpg'),
+            side: THREE.BackSide, color: 0x555577
+        });
+        this.scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+        // 별 배경 (부드러운 글로우 점, 크기·밝기 다양)
+        const starCanvas = document.createElement('canvas');
+        starCanvas.width = starCanvas.height = 64;
+        const sctx = starCanvas.getContext('2d');
+        const sGrad = sctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        sGrad.addColorStop(0, 'rgba(255,255,255,1)');
+        sGrad.addColorStop(0.3, 'rgba(255,255,255,0.6)');
+        sGrad.addColorStop(1, 'rgba(255,255,255,0)');
+        sctx.fillStyle = sGrad;
+        sctx.fillRect(0, 0, 64, 64);
+        const starTexture = new THREE.CanvasTexture(starCanvas);
+
+        const starLayers = [
+            { count: 400, size: 1.2, opacity: 0.6 },
+            { count: 250, size: 2.2, opacity: 0.85 },
+            { count: 60, size: 3.5, opacity: 1.0 },
+        ];
+        starLayers.forEach(layer => {
+            const starGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(layer.count * 3);
+            for (let i = 0; i < layer.count; i++) {
+                const r = 200 + Math.random() * 300;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = r * Math.cos(phi);
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starMat = new THREE.PointsMaterial({
+                color: 0xffffff, size: layer.size, sizeAttenuation: true,
+                map: starTexture, transparent: true, opacity: layer.opacity,
+                depthWrite: false, blending: THREE.AdditiveBlending
+            });
+            this.scene.add(new THREE.Points(starGeo, starMat));
+        });
 
         // 버튼 및 토글 이벤트 (옵셔널 체이닝 대입 금지 → 안전 바인딩)
         const startBtn = document.getElementById('ch5-start-btn');

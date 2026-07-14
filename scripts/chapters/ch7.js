@@ -47,39 +47,92 @@ class ConstellationDrawer {
         return -1;
     }
 
+    drawNightSky() {
+        const w = this.canvas.width, h = this.canvas.height;
+        // 밤하늘 그라디언트
+        const grad = this.ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#070d1f');
+        grad.addColorStop(0.6, '#0d1630');
+        grad.addColorStop(1, '#16224a');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillRect(0, 0, w, h);
+
+        // 배경 잔별 (크기 바뀔 때만 재생성)
+        if (!this.bgStars || this.bgStarsSize !== `${w}x${h}`) {
+            this.bgStarsSize = `${w}x${h}`;
+            this.bgStars = [];
+            const count = Math.floor((w * h) / 3500);
+            for (let i = 0; i < count; i++) {
+                this.bgStars.push({
+                    x: Math.random() * w, y: Math.random() * h,
+                    r: Math.random() * 0.9 + 0.3,
+                    a: Math.random() * 0.5 + 0.15
+                });
+            }
+        }
+        this.bgStars.forEach(s => {
+            this.ctx.beginPath();
+            this.ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${s.a})`;
+            this.ctx.fill();
+        });
+    }
+
     drawAllElements() {
         const rect = this.canvas.getBoundingClientRect();
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
 
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.drawNightSky();
 
         this.lines.forEach(line => {
             const startStar = this.stars[line.startIndex];
             const endStar = this.stars[line.endIndex];
 
             if (startStar && endStar) {
+                this.ctx.save();
                 this.ctx.beginPath();
                 this.ctx.strokeStyle = line.color;
                 this.ctx.lineWidth = 2;
+                this.ctx.shadowColor = line.color;
+                this.ctx.shadowBlur = 6;
                 this.ctx.moveTo(startStar.x, startStar.y);
                 this.ctx.lineTo(endStar.x, endStar.y);
                 this.ctx.stroke();
+                this.ctx.restore();
             }
         });
 
         this.stars.forEach((star, index) => {
+            // 글로우(빛 번짐)
+            const glow = this.ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, 14);
+            glow.addColorStop(0, 'rgba(255, 250, 220, 0.9)');
+            glow.addColorStop(0.25, 'rgba(254, 240, 138, 0.45)');
+            glow.addColorStop(1, 'rgba(254, 240, 138, 0)');
+            this.ctx.beginPath();
+            this.ctx.arc(star.x, star.y, 14, 0, Math.PI * 2);
+            this.ctx.fillStyle = glow;
+            this.ctx.fill();
+
+            // 십자 빛줄기
+            this.ctx.save();
+            this.ctx.strokeStyle = 'rgba(255, 252, 235, 0.8)';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(star.x - 9, star.y); this.ctx.lineTo(star.x + 9, star.y);
+            this.ctx.moveTo(star.x, star.y - 9); this.ctx.lineTo(star.x, star.y + 9);
+            this.ctx.stroke();
+            this.ctx.restore();
+
+            // 별 중심
             this.ctx.beginPath();
             this.ctx.arc(star.x, star.y, this.starRadius, 0, Math.PI * 2);
-            this.ctx.fillStyle = '#fef08a';
+            this.ctx.fillStyle = '#fffbe8';
             this.ctx.fill();
-            this.ctx.strokeStyle = '#facc15';
-            this.ctx.lineWidth = 1;
-            this.ctx.stroke();
 
             if (this.drawingMode === 'lines' && index === this.selectedStarIndex) {
                 this.ctx.beginPath();
-                this.ctx.arc(star.x, star.y, this.starRadius + 4, 0, Math.PI * 2);
+                this.ctx.arc(star.x, star.y, this.starRadius + 6, 0, Math.PI * 2);
                 this.ctx.strokeStyle = '#60a5fa';
                 this.ctx.lineWidth = 2;
                 this.ctx.stroke();

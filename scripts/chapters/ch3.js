@@ -24,14 +24,37 @@ class CraterSimulation {
         this.container.appendChild(this.renderer.domElement);
         this.camera.position.set(0, 150, 300);
         this.controls.update();
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         this.scene.add(ambientLight);
-        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
         this.directionalLight.position.set(-100, 100, 100);
         this.directionalLight.castShadow = true;
         this.scene.add(this.directionalLight);
+
+        // 달 표면 텍스처 (bump로 재사용해 표면 요철 표현) — reset 시 재사용
+        const textureLoader = new THREE.TextureLoader();
+        this.moonTexture = textureLoader.load('assets/textures/2k_moon.jpg');
+        this.moonMaterial = new THREE.MeshStandardMaterial({
+            map: this.moonTexture,
+            bumpMap: this.moonTexture,
+            bumpScale: 1.2,
+            roughness: 0.95,
+            metalness: 0
+        });
+
+        // 은하수 배경
+        const skyGeo = new THREE.SphereGeometry(800, 48, 32);
+        const skyMat = new THREE.MeshBasicMaterial({
+            map: textureLoader.load('assets/textures/2k_stars_milky_way.jpg'),
+            side: THREE.BackSide, color: 0x777788
+        });
+        this.scene.add(new THREE.Mesh(skyGeo, skyMat));
+
         this.createMoon();
         window.addEventListener('resize', () => this.onWindowResize(), false);
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => this.onWindowResize()).observe(this.container);
+        }
     }
     setLightByAngles(azimuthDeg, elevationDeg) {
         const r = 200;
@@ -46,9 +69,8 @@ class CraterSimulation {
         }
     }
     createMoon() {
-        const moonGeometry = new THREE.SphereGeometry(100, 128, 128); 
-        const moonMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.9 });
-        this.moon = new THREE.Mesh(moonGeometry, moonMaterial);
+        const moonGeometry = new THREE.SphereGeometry(100, 128, 128);
+        this.moon = new THREE.Mesh(moonGeometry, this.moonMaterial);
         this.moon.receiveShadow = true;
         this.scene.add(this.moon);
     }
@@ -61,8 +83,19 @@ class CraterSimulation {
     createCollision(mass, velocity, theta, phi) {
         if (this.meteor) this.scene.remove(this.meteor);
         const meteorSize = mass / 10;
-        const meteorGeometry = new THREE.SphereGeometry(meteorSize, 16, 16);
-        const meteorMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.5 });
+        // 울퉁불퉁한 암석 모양 (정점 랜덤 변형)
+        const meteorGeometry = new THREE.IcosahedronGeometry(meteorSize, 2);
+        const mPos = meteorGeometry.attributes.position;
+        const mv = new THREE.Vector3();
+        for (let i = 0; i < mPos.count; i++) {
+            mv.fromBufferAttribute(mPos, i);
+            // 위치 기반 노이즈: 같은 위치의 정점은 같은 값 → 표면이 찢어지지 않음
+            const n = Math.sin(mv.x * 5.7 / meteorSize) + Math.sin(mv.y * 4.3 / meteorSize) + Math.sin(mv.z * 6.1 / meteorSize);
+            mv.multiplyScalar(1 + n * 0.07);
+            mPos.setXYZ(i, mv.x, mv.y, mv.z);
+        }
+        meteorGeometry.computeVertexNormals();
+        const meteorMaterial = new THREE.MeshStandardMaterial({ color: 0x6e5843, roughness: 1, flatShading: true });
         this.meteor = new THREE.Mesh(meteorGeometry, meteorMaterial);
         this.meteor.castShadow = true;
         const thetaRad = THREE.MathUtils.degToRad(theta);
@@ -104,8 +137,8 @@ class CraterSimulation {
     createDebris(position, mass) {
         const particleCount = mass * 2;
         for (let i = 0; i < particleCount; i++) {
-            const particleGeometry = new THREE.SphereGeometry(Math.random() * 0.5 + 0.2, 4, 4);
-            const particleMaterial = new THREE.MeshStandardMaterial({ color: 0x999999 });
+            const particleGeometry = new THREE.IcosahedronGeometry(Math.random() * 0.5 + 0.2, 0);
+            const particleMaterial = new THREE.MeshStandardMaterial({ color: 0x8a8378, roughness: 1, flatShading: true });
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
             particle.position.copy(position);
             const velocity = new THREE.Vector3((Math.random() - 0.5) * mass / 5, (Math.random() - 0.5) * mass / 5, (Math.random() - 0.5) * mass / 5);
