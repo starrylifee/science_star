@@ -236,57 +236,45 @@
                     <h2 class="text-3xl font-bold text-yellow-300">챕터 5: 달의 위상 변화 관찰 🌗</h2>
                     <p class="text-lg text-gray-300 mt-2">관측 시간대나 특정 위상을 선택하고, 지구 위 관측자의 시점에서 달의 모습을 관찰해보세요.</p>
                 </div>
-                <div class="flex flex-col lg:flex-row gap-6">
-                    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-black rounded-2xl border-2 border-gray-700 relative h-[500px] min-h-[500px] overflow-hidden">
+                <div class="relative">
+                    <div id="ch5-panels" class="grid grid-cols-2 gap-4">
+                        <div id="ch5-panel-space" class="bg-black rounded-2xl border-2 border-gray-700 relative h-[560px] min-h-[560px] overflow-hidden">
                             <div id="ch5-container" class="absolute inset-0"></div>
-                            <div class="absolute left-2 top-2 text-xs bg-gray-800/70 px-2 py-1 rounded-md">🛰️ 우주에서 본 모습 · 드래그/휠 가능</div>
+                            <div class="absolute left-2 top-2 text-xs bg-gray-800/70 px-2 py-1 rounded-md pointer-events-none">🛰️ 우주에서 본 모습 · 드래그/휠 가능</div>
+                            <button id="ch5-expand-space" class="absolute right-2 top-2 z-10 text-xs bg-gray-800/80 hover:bg-indigo-600 px-2.5 py-1.5 rounded-md border border-gray-600">⛶ 크게 보기</button>
                         </div>
-                        <div class="bg-black rounded-2xl border-2 border-gray-700 relative h-[500px] min-h-[500px] overflow-hidden">
+                        <div id="ch5-panel-sky" class="bg-black rounded-2xl border-2 border-gray-700 relative h-[560px] min-h-[560px] overflow-hidden">
                             <div id="ch5-sky-container" class="absolute inset-0"></div>
-                            <div class="absolute left-2 top-2 text-xs bg-gray-800/70 px-2 py-1 rounded-md">🧍 관측자가 본 하늘 · 드래그해서 사방 둘러보기</div>
+                            <div class="absolute left-2 top-2 text-xs bg-gray-800/70 px-2 py-1 rounded-md pointer-events-none">🧍 관측자가 본 하늘 · 드래그해서 사방 둘러보기</div>
+                            <button id="ch5-expand-sky" class="absolute right-2 top-2 z-10 text-xs bg-gray-800/80 hover:bg-indigo-600 px-2.5 py-1.5 rounded-md border border-gray-600">⛶ 크게 보기</button>
                         </div>
                     </div>
-                    <div class="w-full lg:w-96 flex-shrink-0 flex flex-col gap-4 bg-gray-800 p-4 rounded-2xl">
-                        <div class="flex flex-wrap justify-center items-center gap-4">
-                            <div class="flex gap-2">
-                                <button id="ch5-start-btn" class="px-4 py-2 bg-green-600 rounded-lg font-bold hover:bg-green-500">시작 ▶️</button>
-                                <button id="ch5-stop-btn" class="px-4 py-2 bg-red-600 rounded-lg font-bold hover:bg-red-500">정지 ⏸️</button>
-                            </div>
-                            <span id="ch5-playing" class="text-xs px-2 py-1 rounded bg-green-700 text-white hidden">재생 중...</span>
-                            <!-- 날짜/시각 표시 제거 -->
-                        </div>
-                        <hr class="border-gray-600 my-2">
-                        <div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-2">
-                            <div class="text-sm font-bold">시간대 선택:</div>
-                            <div class="flex gap-2">
-                                <button id="ch5-evening-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">초저녁</button>
-                                <button id="ch5-midnight-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">자정</button>
-                                <button id="ch5-dawn-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">새벽</button>
-                            </div>
-                            <div class="flex items-center gap-2 ml-2">
-                                <label for="ch5-speed" class="text-sm">속도</label>
-                                <select id="ch5-speed" class="bg-gray-700 rounded px-2 py-1 text-sm">
-                                    <option value="5">5분/초</option>
-                                    <option value="10">10분/초</option>
-                                    <option value="30">30분/초</option>
-                                </select>
-                            </div>
-                            <div class="flex items-center gap-2 ml-2">
-                                <button id="ch5-step-back" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">-15분</button>
-                                <button id="ch5-step-forward" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">+15분</button>
-                                <button id="ch5-reverse" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">역재생 ◀︎</button>
-                            </div>
-                            <div class="text-sm font-bold ml-4">위상 선택:</div>
-                            <div class="flex flex-wrap gap-2 justify-center">
-                                <button id="ch5-new-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">삭</button>
-                                <button id="ch5-waxing-crescent-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">초승</button>
-                                <button id="ch5-first-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">상현</button>
-                                <button id="ch5-full-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">보름</button>
-                                <button id="ch5-third-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">하현</button>
-                                <button id="ch5-waning-crescent-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">그믐</button>
-                            </div>
-                        </div>
+                    <!-- 플로팅 컨트롤 바 -->
+                    <div id="ch5-controls" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 max-w-[96%] bg-gray-900/90 backdrop-blur rounded-2xl px-4 py-2.5 border border-gray-600 shadow-2xl flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2">
+                        <button id="ch5-start-btn" class="px-3 py-1.5 bg-green-600 rounded-lg font-bold text-sm hover:bg-green-500">시작 ▶️</button>
+                        <button id="ch5-stop-btn" class="px-3 py-1.5 bg-red-600 rounded-lg font-bold text-sm hover:bg-red-500">정지 ⏸️</button>
+                        <span id="ch5-playing" class="text-xs px-2 py-1 rounded bg-green-700 text-white hidden">재생 중...</span>
+                        <span class="w-px h-6 bg-gray-600"></span>
+                        <span class="text-sm font-bold text-gray-300">시간대</span>
+                        <button id="ch5-evening-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">초저녁</button>
+                        <button id="ch5-midnight-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">자정</button>
+                        <button id="ch5-dawn-btn" class="time-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">새벽</button>
+                        <select id="ch5-speed" class="bg-gray-700 rounded px-2 py-1 text-sm">
+                            <option value="5">5분/초</option>
+                            <option value="10">10분/초</option>
+                            <option value="30">30분/초</option>
+                        </select>
+                        <button id="ch5-step-back" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">-15분</button>
+                        <button id="ch5-step-forward" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">+15분</button>
+                        <button id="ch5-reverse" class="px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">역재생 ◀︎</button>
+                        <span class="w-px h-6 bg-gray-600"></span>
+                        <span class="text-sm font-bold text-gray-300">위상</span>
+                        <button id="ch5-new-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">삭</button>
+                        <button id="ch5-waxing-crescent-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">초승</button>
+                        <button id="ch5-first-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">상현</button>
+                        <button id="ch5-full-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">보름</button>
+                        <button id="ch5-third-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">하현</button>
+                        <button id="ch5-waning-crescent-btn" class="phase-btn px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-indigo-500">그믐</button>
                     </div>
                 </div>
             </div>

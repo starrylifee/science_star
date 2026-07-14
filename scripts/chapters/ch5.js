@@ -261,6 +261,26 @@ class MoonPhaseSimulation {
         const moonToggle = document.getElementById('ch5-moon-toggle');
         if (moonToggle) moonToggle.onchange = (e) => { this.moon.visible = e.target.checked; this.frontIndicator.visible = e.target.checked; };
 
+        // 패널 크게 보기 토글 (캔버스 리사이즈는 ResizeObserver가 처리)
+        const panelSpace = document.getElementById('ch5-panel-space');
+        const panelSky = document.getElementById('ch5-panel-sky');
+        const btnSpace = document.getElementById('ch5-expand-space');
+        const btnSky = document.getElementById('ch5-expand-sky');
+        if (panelSpace && panelSky && btnSpace && btnSky) {
+            const setExpand = (target) => {
+                // target: null(반반) | 'space' | 'sky'
+                panelSpace.classList.toggle('col-span-2', target === 'space');
+                panelSpace.classList.toggle('hidden', target === 'sky');
+                panelSky.classList.toggle('col-span-2', target === 'sky');
+                panelSky.classList.toggle('hidden', target === 'space');
+                btnSpace.textContent = target === 'space' ? '◫ 나누어 보기' : '⛶ 크게 보기';
+                btnSky.textContent = target === 'sky' ? '◫ 나누어 보기' : '⛶ 크게 보기';
+                this._expanded = target;
+            };
+            btnSpace.onclick = () => setExpand(this._expanded === 'space' ? null : 'space');
+            btnSky.onclick = () => setExpand(this._expanded === 'sky' ? null : 'sky');
+        }
+
         this.initSkyView();
         this.updateTimeButtons();
         this.updatePositions(); // 초기 반영
@@ -432,6 +452,9 @@ class MoonPhaseSimulation {
         const gDay = new THREE.Color(0x4f8a3d), gNight = new THREE.Color(0x141f16);
         this.skyGround.material.color.copy(gNight).lerp(gDay, THREE.MathUtils.clamp((altDeg + 12) / 27, 0, 1));
         this.skyStars.material.opacity = THREE.MathUtils.clamp(-altDeg / 12, 0, 1) * 0.9;
+
+        // 달의 어두운 면은 하늘 밝기에 묻혀 하늘색으로 보이도록 (검은 원 방지, 밤엔 자연히 어두움)
+        this.skyMoon.material.emissive.copy(skyColor).multiplyScalar(0.92);
 
         // 상단 토글과 연동
         this.skyMoon.visible = this.moon.visible;
