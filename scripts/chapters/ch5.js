@@ -25,7 +25,7 @@ class MoonPhaseSimulation {
     init() {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
-        this.camera.position.set(0, 15, 30);
+        this.camera.position.set(0, 18, 40);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         const parentRect = this.container.parentElement?.getBoundingClientRect();
@@ -95,15 +95,33 @@ class MoonPhaseSimulation {
         this.frontIndicator.position.set(0, 0, 1.5);
         this.moon.add(this.frontIndicator);
 
-        // 관측자 그룹 생성 (눈에 잘 띄도록 크게 + 발광 표시)
+        // 관측자 그룹 생성: 지평선에 수직으로 선 노란 사람 모형 (비율보다 가시성 우선)
         this.observer = new THREE.Group();
-        const bodyMat = new THREE.MeshBasicMaterial({ color: 0xffdd00 });
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 12), bodyMat);
-        body.position.y = 0.7;
-        this.observer.add(body);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bodyMat);
-        head.position.y = 1.8;
-        this.observer.add(head);
+        const bodyMat = new THREE.MeshBasicMaterial({ color: 0xffd400 });
+        const person = new THREE.Group();
+        // 다리
+        [-0.14, 0.14].forEach(x => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.6, 8), bodyMat);
+            leg.position.set(x, 0.3, 0);
+            person.add(leg);
+        });
+        // 몸통
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.75, 12), bodyMat);
+        torso.position.y = 0.95;
+        person.add(torso);
+        // 팔 (살짝 벌린 자세)
+        [-1, 1].forEach(side => {
+            const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.55, 8), bodyMat);
+            arm.position.set(side * 0.38, 1.05, 0);
+            arm.rotation.z = side * -0.45;
+            person.add(arm);
+        });
+        // 머리
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), bodyMat);
+        head.position.y = 1.62;
+        person.add(head);
+        person.scale.setScalar(1.8); // 비율보다 가시성 우선
+        this.observer.add(person);
 
         // 관측자 위치 강조용 글로우 마커
         const markerCanvas = document.createElement('canvas');
@@ -119,8 +137,8 @@ class MoonPhaseSimulation {
             map: new THREE.CanvasTexture(markerCanvas),
             transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
         }));
-        markerSprite.scale.set(5, 5, 1);
-        markerSprite.position.y = 1.2;
+        markerSprite.scale.set(6, 6, 1);
+        markerSprite.position.y = 1.7;
         this.observer.add(markerSprite);
         this.scene.add(this.observer);
 
@@ -243,6 +261,7 @@ class MoonPhaseSimulation {
         const moonToggle = document.getElementById('ch5-moon-toggle');
         if (moonToggle) moonToggle.onchange = (e) => { this.moon.visible = e.target.checked; this.frontIndicator.visible = e.target.checked; };
 
+        this.initSkyView();
         this.updateTimeButtons();
         this.updatePositions(); // 초기 반영
         this.onWindowResize();
@@ -251,6 +270,172 @@ class MoonPhaseSimulation {
             this.renderer.render(this.scene, this.camera); // 초기 1프레임 강제 렌더
         });
         window.addEventListener('resize', () => this.onWindowResize());
+    }
+
+    // ==========================================================
+    // 관측자 시점 하늘 뷰 (1인칭 360도, 드래그로 둘러보기)
+    // ==========================================================
+    initSkyView() {
+        this.skyContainer = document.getElementById('ch5-sky-container');
+        if (!this.skyContainer) return;
+
+        this.skyScene = new THREE.Scene();
+        this.skyScene.background = new THREE.Color(0x0a1128);
+        this.skyCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
+        this.skyCamera.position.set(0, 2, 0);
+        this.skyYaw = 0;      // 0 = 남쪽
+        this.skyPitch = 0.55; // 남쪽 하늘을 올려다봄
+
+        this.skyRenderer = new THREE.WebGLRenderer({ antialias: true });
+        const rect = this.skyContainer.getBoundingClientRect();
+        this.skyRenderer.setSize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
+        this.skyRenderer.setPixelRatio(window.devicePixelRatio);
+        this.skyContainer.appendChild(this.skyRenderer.domElement);
+
+        const textureLoader = new THREE.TextureLoader();
+
+        // 땅
+        this.skyGround = new THREE.Mesh(
+            new THREE.CircleGeometry(600, 48),
+            new THREE.MeshBasicMaterial({ color: 0x17251a })
+        );
+        this.skyGround.rotation.x = -Math.PI / 2;
+        this.skyScene.add(this.skyGround);
+
+        // 달 (실제 텍스처 + 태양 방향 조명으로 위상 자동 표현)
+        this.skyMoon = new THREE.Mesh(
+            new THREE.SphereGeometry(9, 48, 48),
+            new THREE.MeshPhongMaterial({ map: textureLoader.load('assets/textures/2k_moon.jpg'), shininess: 2 })
+        );
+        this.skyScene.add(this.skyMoon);
+        this.skyMoonLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        this.skyScene.add(this.skyMoonLight);
+        this.skyMoonLight.target = this.skyMoon;
+        this.skyScene.add(new THREE.AmbientLight(0xffffff, 0.12));
+
+        // 태양 (글로우 스프라이트)
+        const sunCanvas = document.createElement('canvas');
+        sunCanvas.width = sunCanvas.height = 128;
+        const sctx = sunCanvas.getContext('2d');
+        const sGrad = sctx.createRadialGradient(64, 64, 10, 64, 64, 64);
+        sGrad.addColorStop(0, 'rgba(255, 250, 210, 1)');
+        sGrad.addColorStop(0.3, 'rgba(255, 225, 130, 0.7)');
+        sGrad.addColorStop(1, 'rgba(255, 200, 80, 0)');
+        sctx.fillStyle = sGrad;
+        sctx.fillRect(0, 0, 128, 128);
+        this.skySun = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: new THREE.CanvasTexture(sunCanvas),
+            transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        this.skySun.scale.set(80, 80, 1);
+        this.skyScene.add(this.skySun);
+
+        // 별 (밤에만 보이도록 투명도 조절)
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 400;
+        const sPositions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 0.48; // 윗반구
+            const r = 800;
+            sPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+            sPositions[i * 3 + 1] = r * Math.cos(phi);
+            sPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+        }
+        starGeo.setAttribute('position', new THREE.BufferAttribute(sPositions, 3));
+        this.skyStars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+            color: 0xffffff, size: 3, transparent: true, opacity: 0.9, depthWrite: false
+        }));
+        this.skyScene.add(this.skyStars);
+
+        // 방위 라벨 (동=+X, 서=-X, 남=+Z, 북=-Z)
+        [['동', 350, 0], ['서', -350, 0], ['남', 0, 350], ['북', 0, -350]].forEach(([txt, x, z]) => {
+            const label = this.createTextSprite(txt, { fontsize: 80, scale: 12 });
+            label.position.set(x, 28, z);
+            this.skyScene.add(label);
+        });
+
+        // 드래그로 둘러보기
+        const dom = this.skyRenderer.domElement;
+        dom.style.cursor = 'grab';
+        dom.style.touchAction = 'none';
+        let dragging = false, lastX = 0, lastY = 0;
+        dom.addEventListener('pointerdown', (e) => {
+            dragging = true; lastX = e.clientX; lastY = e.clientY;
+            dom.setPointerCapture(e.pointerId);
+            dom.style.cursor = 'grabbing';
+        });
+        dom.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            this.skyYaw -= (e.clientX - lastX) * 0.005;
+            this.skyPitch = Math.min(1.35, Math.max(-0.12, this.skyPitch + (e.clientY - lastY) * 0.004));
+            lastX = e.clientX; lastY = e.clientY;
+        });
+        ['pointerup', 'pointercancel'].forEach(ev => dom.addEventListener(ev, () => {
+            dragging = false; dom.style.cursor = 'grab';
+        }));
+
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => this.onSkyResize()).observe(this.skyContainer);
+        }
+    }
+
+    onSkyResize() {
+        if (!this.skyRenderer || !this.skyContainer) return;
+        const rect = this.skyContainer.getBoundingClientRect();
+        const w = Math.max(1, Math.floor(rect.width)), h = Math.max(1, Math.floor(rect.height));
+        this.skyCamera.aspect = w / h;
+        this.skyCamera.updateProjectionMatrix();
+        this.skyRenderer.setSize(w, h);
+    }
+
+    // 시뮬레이션 상태 → 관측자 하늘 좌표로 변환해 달/태양/하늘색 갱신
+    updateSkyView() {
+        if (!this.skyScene) return;
+        const obsPos = this.observer.position;
+        const up = obsPos.clone().normalize();                        // 관측자 머리 위
+        const east = new THREE.Vector3(up.z, 0, -up.x).normalize();   // 자전 방향 = 동쪽
+        const lat = THREE.MathUtils.degToRad(35);                     // 우리나라 위도만큼 하늘 기울임
+
+        // 세계 방향 → 하늘 뷰 좌표 (x=동, y=위, z=남)
+        const toSky = (worldDir) => {
+            const e = worldDir.dot(east);
+            const u = worldDir.dot(up);
+            const s = -worldDir.y; // 남쪽 성분
+            return new THREE.Vector3(
+                e,
+                u * Math.cos(lat) - s * Math.sin(lat),
+                u * Math.sin(lat) + s * Math.cos(lat)
+            );
+        };
+
+        const moonDir = toSky(this.moon.position.clone().sub(obsPos).normalize());
+        this.skyMoon.position.copy(moonDir).multiplyScalar(160);
+        this.skyMoon.rotation.y = this.moon.rotation.y;
+
+        const sunDirWorld = this.sun.position.clone().sub(obsPos).normalize();
+        const sunDir = toSky(sunDirWorld);
+        this.skySun.position.copy(sunDir).multiplyScalar(700);
+        // 달을 비추는 빛은 태양 쪽에서
+        this.skyMoonLight.position.copy(this.skyMoon.position).add(sunDir.clone().multiplyScalar(300));
+
+        // 태양 고도에 따라 하늘색/땅색/별 밝기 변화 (낮 → 노을 → 밤)
+        const altDeg = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(sunDir.y, -1, 1)));
+        const day = new THREE.Color(0x7ab5e8), dusk = new THREE.Color(0xd98a5f), night = new THREE.Color(0x0a1128);
+        let skyColor;
+        if (altDeg > 15) skyColor = day;
+        else if (altDeg > 0) skyColor = dusk.clone().lerp(day, altDeg / 15);
+        else if (altDeg > -12) skyColor = night.clone().lerp(dusk, (altDeg + 12) / 12);
+        else skyColor = night;
+        this.skyScene.background = skyColor;
+
+        const gDay = new THREE.Color(0x4f8a3d), gNight = new THREE.Color(0x141f16);
+        this.skyGround.material.color.copy(gNight).lerp(gDay, THREE.MathUtils.clamp((altDeg + 12) / 27, 0, 1));
+        this.skyStars.material.opacity = THREE.MathUtils.clamp(-altDeg / 12, 0, 1) * 0.9;
+
+        // 상단 토글과 연동
+        this.skyMoon.visible = this.moon.visible;
+        this.skySun.visible = this.sun.visible && altDeg > -8;
     }
 
     startAnimation() {
@@ -371,8 +556,10 @@ class MoonPhaseSimulation {
         );
         this.observer.position.copy(observerPos);
         this.observer.lookAt(this.earth.position);
-        this.observer.rotateX(Math.PI / 2);
+        this.observer.rotateX(-Math.PI / 2); // 로컬 +Y가 지구 바깥(하늘)을 향하도록
         this.horizon.rotation.x = -Math.PI / 2;
+
+        this.updateSkyView();
 
         // 날짜/시각 표시는 하지 않음
     }
@@ -399,6 +586,17 @@ class MoonPhaseSimulation {
 
         this.controls.update();
         this.renderer.render(this.scene, this.camera);
+
+        // 관측자 시점 렌더 (드래그 시선 반영)
+        if (this.skyRenderer) {
+            const lookDir = new THREE.Vector3(
+                Math.sin(this.skyYaw) * Math.cos(this.skyPitch),
+                Math.sin(this.skyPitch),
+                Math.cos(this.skyYaw) * Math.cos(this.skyPitch)
+            );
+            this.skyCamera.lookAt(lookDir.add(this.skyCamera.position));
+            this.skyRenderer.render(this.skyScene, this.skyCamera);
+        }
     }
 
     // ==========================================================
@@ -438,5 +636,6 @@ class MoonPhaseSimulation {
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(w, h);
+        this.onSkyResize();
     }
 }
