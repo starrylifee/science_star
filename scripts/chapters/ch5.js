@@ -395,6 +395,13 @@ class MoonPhaseSimulation {
             dragging = false; dom.style.cursor = 'grab';
         }));
 
+        // 휠로 확대/축소 (시야각 조절)
+        dom.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this.skyCamera.fov = THREE.MathUtils.clamp(this.skyCamera.fov + e.deltaY * 0.03, 15, 80);
+            this.skyCamera.updateProjectionMatrix();
+        }, { passive: false });
+
         if (typeof ResizeObserver !== 'undefined') {
             new ResizeObserver(() => this.onSkyResize()).observe(this.skyContainer);
         }
