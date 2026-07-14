@@ -84,27 +84,69 @@ class ErosionSimulation {
             });
             scene.add(new THREE.Mesh(skyGeo, skyMat));
         } else {
-            // 지구 지표: 절차적 흙 텍스처 (노이즈 캔버스)
-            const soilCanvas = document.createElement('canvas');
-            soilCanvas.width = soilCanvas.height = 512;
-            const sctx = soilCanvas.getContext('2d');
-            sctx.fillStyle = '#8a6a3f';
+            // 지구 지표: 무채색 노이즈 텍스처 + 높이 기반 정점 색(풀/흙/바위)
+            const noiseCanvas = document.createElement('canvas');
+            noiseCanvas.width = noiseCanvas.height = 512;
+            const sctx = noiseCanvas.getContext('2d');
+            sctx.fillStyle = '#d9d9d9';
             sctx.fillRect(0, 0, 512, 512);
-            for (let i = 0; i < 9000; i++) {
-                const shade = 90 + Math.floor(Math.random() * 70);
-                sctx.fillStyle = `rgba(${shade + 30}, ${shade}, ${Math.floor(shade * 0.6)}, ${0.15 + Math.random() * 0.25})`;
-                const s = 1 + Math.random() * 4;
+            for (let i = 0; i < 12000; i++) {
+                const shade = 170 + Math.floor(Math.random() * 85);
+                sctx.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${0.2 + Math.random() * 0.3})`;
+                const s = 1 + Math.random() * 3;
                 sctx.fillRect(Math.random() * 512, Math.random() * 512, s, s);
             }
-            const soilTex = new THREE.CanvasTexture(soilCanvas);
-            soilTex.wrapS = soilTex.wrapT = THREE.RepeatWrapping;
-            soilTex.repeat.set(2, 2);
-            planetMaterial = new THREE.MeshStandardMaterial({ map: soilTex, bumpMap: soilTex, bumpScale: 0.15, roughness: 0.9 });
-            // 지구 하늘: 맑은 하늘색 + 원거리 안개
+            const noiseTex = new THREE.CanvasTexture(noiseCanvas);
+            noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
+            noiseTex.repeat.set(3, 3);
+            planetMaterial = new THREE.MeshStandardMaterial({ map: noiseTex, bumpMap: noiseTex, bumpScale: 0.12, roughness: 0.9, vertexColors: true });
+            // 지구 하늘: 맑은 하늘색 + 원거리 안개 + 태양 + 구름
             scene.background = new THREE.Color(0x87b5e0);
             scene.fog = new THREE.Fog(0x87b5e0, 30, 120);
+
+            const sunCanvas = document.createElement('canvas');
+            sunCanvas.width = sunCanvas.height = 128;
+            const sunCtx = sunCanvas.getContext('2d');
+            const sunGrad = sunCtx.createRadialGradient(64, 64, 10, 64, 64, 64);
+            sunGrad.addColorStop(0, 'rgba(255, 250, 220, 1)');
+            sunGrad.addColorStop(0.3, 'rgba(255, 235, 150, 0.7)');
+            sunGrad.addColorStop(1, 'rgba(255, 220, 100, 0)');
+            sunCtx.fillStyle = sunGrad;
+            sunCtx.fillRect(0, 0, 128, 128);
+            const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: new THREE.CanvasTexture(sunCanvas),
+                transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+            }));
+            sunSprite.position.set(28, 16, -80);
+            sunSprite.scale.set(22, 22, 1);
+            scene.add(sunSprite);
+
+            const cloudCanvas = document.createElement('canvas');
+            cloudCanvas.width = 128; cloudCanvas.height = 64;
+            const cctx = cloudCanvas.getContext('2d');
+            [[34, 40, 20], [64, 32, 26], [95, 42, 18], [50, 44, 16], [80, 46, 14]].forEach(([cx, cy, cr]) => {
+                const g = cctx.createRadialGradient(cx, cy, 2, cx, cy, cr);
+                g.addColorStop(0, 'rgba(255,255,255,0.85)');
+                g.addColorStop(1, 'rgba(255,255,255,0)');
+                cctx.fillStyle = g;
+                cctx.fillRect(0, 0, 128, 64);
+            });
+            const cloudTex = new THREE.CanvasTexture(cloudCanvas);
+            for (let i = 0; i < 6; i++) {
+                const cloud = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: cloudTex, transparent: true, opacity: 0.7 + Math.random() * 0.2, depthWrite: false
+                }));
+                cloud.position.set(-60 + Math.random() * 120, 7 + Math.random() * 8, -55 - Math.random() * 25);
+                const cw = 18 + Math.random() * 14;
+                cloud.scale.set(cw, cw * 0.4, 1);
+                scene.add(cloud);
+            }
         }
         const planetGeometry = new THREE.PlaneGeometry(20, 20, 100, 100);
+        if (type === 'earth') {
+            const vCount = planetGeometry.attributes.position.count;
+            planetGeometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(vCount * 3), 3));
+        }
         const planet = new THREE.Mesh(planetGeometry, planetMaterial);
         planet.rotation.x = -Math.PI / 2;
         scene.add(planet);
@@ -121,7 +163,8 @@ class ErosionSimulation {
         } else {
             this.earthApp = app;
             // 물 생성
-            const waterGeo = new THREE.PlaneGeometry(20, 20, 64, 64);
+            // 물은 구덩이 안에서만 차오르도록 원판으로
+            const waterGeo = new THREE.CircleGeometry(4.4, 64);
             const waterMat = new THREE.MeshPhongMaterial({
                 color: 0x2e6fbe, transparent: true, opacity: 0.65,
                 shininess: 120, specular: 0xaaccff
@@ -180,7 +223,34 @@ class ErosionSimulation {
         }
 
         this.createCrater(app);
+        if (type === 'earth') this.updateEarthColors(app);
         renderer.render(scene, camera);
+    }
+
+    // 높이 기반 지표 색: 구덩이 속은 흙, 테두리는 바위, 평지는 풀
+    updateEarthColors(app) {
+        const geometry = app.planet.geometry;
+        const positions = geometry.attributes.position;
+        const colors = geometry.attributes.color;
+        if (!colors) return;
+        for (let i = 0; i < positions.count; i++) {
+            const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
+            let r, g, b;
+            if (z < -0.03) {
+                // 흙 (깊을수록 어둡게)
+                const d = Math.min(1, -z / 1.5);
+                r = 0.55 - d * 0.15; g = 0.42 - d * 0.12; b = 0.27 - d * 0.08;
+            } else if (z > 0.12) {
+                // 바위 테두리
+                r = 0.62; g = 0.56; b = 0.46;
+            } else {
+                // 풀 (위치 기반 미세 변화)
+                const n = (Math.sin(x * 2.3) + Math.cos(y * 1.7)) * 0.04;
+                r = 0.32 + n; g = 0.58 + n; b = 0.28 + n;
+            }
+            colors.setXYZ(i, r, g, b);
+        }
+        colors.needsUpdate = true;
     }
 
     createCrater(app) {
@@ -240,6 +310,7 @@ class ErosionSimulation {
             }
             this.createCrater(app);
             if(appName === 'earthApp') {
+                this.updateEarthColors(app);
                 app.water.position.y = -1.5;
                 if (app.rainGroup) app.rainGroup.children.forEach(d => d.position.set((Math.random() - 0.5) * 18, Math.random() * 8 + 2, (Math.random() - 0.5) * 18));
                 if (app.windGroup) app.windGroup.children.forEach(p => p.position.set((Math.random() - 0.5) * 18, Math.random() * 4 + 0.5, (Math.random() - 0.5) * 18));
@@ -291,6 +362,7 @@ class ErosionSimulation {
         }
         positions.needsUpdate = true;
         geometry.computeVertexNormals();
+        this.updateEarthColors(earthApp); // 침식으로 메워질수록 풀색 복원
 
         if (earthApp.water.position.y < -0.1) {
                 earthApp.water.position.y += this.enableRain ? 0.003 : 0.001;

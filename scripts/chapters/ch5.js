@@ -95,22 +95,47 @@ class MoonPhaseSimulation {
         this.frontIndicator.position.set(0, 0, 1.5);
         this.moon.add(this.frontIndicator);
 
-        // 관측자 그룹 생성
+        // 관측자 그룹 생성 (눈에 잘 띄도록 크게 + 발광 표시)
         this.observer = new THREE.Group();
-        const bodyGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8);
-        const bodyMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        const bodyMat = new THREE.MeshBasicMaterial({ color: 0xffdd00 });
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 12), bodyMat);
+        body.position.y = 0.7;
         this.observer.add(body);
-        const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
-        const head = new THREE.Mesh(headGeo, bodyMat);
-        head.position.y = 0.6;
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bodyMat);
+        head.position.y = 1.8;
         this.observer.add(head);
+
+        // 관측자 위치 강조용 글로우 마커
+        const markerCanvas = document.createElement('canvas');
+        markerCanvas.width = markerCanvas.height = 128;
+        const mctx = markerCanvas.getContext('2d');
+        const mGrad = mctx.createRadialGradient(64, 64, 8, 64, 64, 64);
+        mGrad.addColorStop(0, 'rgba(255, 230, 80, 0.9)');
+        mGrad.addColorStop(0.4, 'rgba(255, 210, 40, 0.35)');
+        mGrad.addColorStop(1, 'rgba(255, 200, 0, 0)');
+        mctx.fillStyle = mGrad;
+        mctx.fillRect(0, 0, 128, 128);
+        const markerSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: new THREE.CanvasTexture(markerCanvas),
+            transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        markerSprite.scale.set(5, 5, 1);
+        markerSprite.position.y = 1.2;
+        this.observer.add(markerSprite);
         this.scene.add(this.observer);
 
-        // 지평선 생성
-        const horizonGeo = new THREE.CircleGeometry(15, 32);
-        const horizonMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-        this.horizon = new THREE.Mesh(horizonGeo, horizonMat);
+        // 지평선: 은은한 면 + 뚜렷한 테두리 링
+        this.horizon = new THREE.Group();
+        const horizonPlane = new THREE.Mesh(
+            new THREE.CircleGeometry(15, 48),
+            new THREE.MeshBasicMaterial({ color: 0x33cc66, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false })
+        );
+        this.horizon.add(horizonPlane);
+        const horizonRim = new THREE.Mesh(
+            new THREE.RingGeometry(14.6, 15, 64),
+            new THREE.MeshBasicMaterial({ color: 0x44ee77, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false })
+        );
+        this.horizon.add(horizonRim);
         this.observer.add(this.horizon);
 
         // ==========================================================

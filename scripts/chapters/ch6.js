@@ -47,7 +47,7 @@ class SolarSystemTour {
         // 은하수 배경 (안쪽에서 보이는 대형 구)
         const skyTexture = this.textureLoader.load('assets/textures/2k_stars_milky_way.jpg');
         const skyGeo = new THREE.SphereGeometry(1500, 60, 40);
-        const skyMat = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
+        const skyMat = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide, color: 0xbbbbcc });
         this.scene.add(new THREE.Mesh(skyGeo, skyMat));
 
         Object.keys(this.planetData).forEach(name => {
@@ -145,6 +145,10 @@ class SolarSystemTour {
             btn.classList.toggle('active', btn.innerText === name);
         });
 
+        // 이동 후에도 공전하는 행성을 카메라가 계속 따라가도록 추적 대상 기록
+        this.followName = (name === '태양') ? null : name;
+        this.isTweening = true;
+
         const targetPosition = new THREE.Vector3(
             targetPlanet.position.x + data.size * 4,
             targetPlanet.position.y + data.size * 4,
@@ -155,8 +159,9 @@ class SolarSystemTour {
         new TWEEN.Tween(this.camera.position)
             .to(targetPosition, 1500)
             .easing(TWEEN.Easing.Quadratic.InOut)
+            .onComplete(() => { this.isTweening = false; })
             .start();
-        
+
         new TWEEN.Tween(this.controls.target)
             .to(controlsTarget, 1500)
             .easing(TWEEN.Easing.Quadratic.InOut)
@@ -179,7 +184,15 @@ class SolarSystemTour {
             planet.position.z = Math.sin(time * speed) * data.distance;
             planet.rotation.y += 0.005;
         });
-        
+
+        // 선택한 행성 추적: 행성이 공전해도 카메라가 같은 상대 위치를 유지
+        if (this.followName && !this.isTweening) {
+            const target = this.planets[this.followName];
+            const delta = new THREE.Vector3().subVectors(target.position, this.controls.target);
+            this.camera.position.add(delta);
+            this.controls.target.copy(target.position);
+        }
+
         this.controls.update();
         this.renderer.render(this.scene, this.camera);
     }
