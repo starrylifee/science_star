@@ -11,8 +11,23 @@ function captureChapter1Image() {
     tempCanvas.height = size;
     const tempCtx = tempCanvas.getContext('2d');
 
-    // moonImage는 object-cover로 원형 마스크처럼 보이므로 정사각 내부에 꽉 차게 리샘플
-    tempCtx.drawImage(moonImage, 0, 0, size, size);
+    // 화면과 동일한 배경 (컨테이너 bg-black)
+    tempCtx.fillStyle = '#000000';
+    tempCtx.fillRect(0, 0, size, size);
+
+    // 화면과 동일하게 object-cover: 원본 중앙을 정사각으로 크롭 후 원형 마스크
+    const nw = moonImage.naturalWidth || size;
+    const nh = moonImage.naturalHeight || size;
+    const crop = Math.min(nw, nh);
+    const sx = (nw - crop) / 2;
+    const sy = (nh - crop) / 2;
+    tempCtx.save();
+    tempCtx.beginPath();
+    tempCtx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    tempCtx.clip();
+    tempCtx.drawImage(moonImage, sx, sy, crop, crop, 0, 0, size, size);
+    tempCtx.restore();
+
     // 드로잉을 동일 크기 스케일로 합성
     tempCtx.drawImage(drawingCanvas, 0, 0, size, size);
 
